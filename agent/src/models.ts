@@ -29,6 +29,8 @@ export interface Model {
   turn(): Promise<{ text: string[]; calls: ToolCall[] }>
   /** The results of the calls from the last turn, in one message. */
   answer(results: ToolResult[]): void
+  /** The user's reply, when the model stopped to ask something. */
+  reply(text: string): void
 }
 
 /** Known OpenAI-compatible endpoints. Any other: set LLM_BASE_URL and LLM_MODEL. */
@@ -90,6 +92,9 @@ function claude(system: string, prompt: string, tools: ToolDef[]): Model {
     },
     answer(results) {
       messages.push({ role: 'user', content: results.map((r) => ({ type: 'tool_result', tool_use_id: r.id, content: r.content, is_error: r.isError })) })
+    },
+    reply(text) {
+      messages.push({ role: 'user', content: text })
     },
   }
 }
@@ -161,6 +166,9 @@ function openaiCompatible(baseUrl: string, key: string, models: string[], system
     },
     answer(results) {
       for (const r of results) messages.push({ role: 'tool', tool_call_id: r.id, content: r.isError ? `error: ${r.content}` : r.content })
+    },
+    reply(text) {
+      messages.push({ role: 'user', content: text })
     },
   }
 }

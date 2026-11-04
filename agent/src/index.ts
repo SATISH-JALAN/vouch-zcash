@@ -69,7 +69,7 @@ function system(c: Config, paymentMethod: string): string {
     '',
     'For each purchase, in this order:',
     '1. search-products, then get-product-details, to find exactly what the user asked for. Pick the package that matches their amount; if none does, say so and stop.',
-    `2. buy-products with payment_method "${paymentMethod}" and return_payment_link false. The user approves every purchase before it is made; if they decline, stop and say so.`,
+    `2. buy-products with payment_method "${paymentMethod}" and return_payment_link false. Call it directly: do not ask the user to confirm in your reply, because this app shows them the cart and asks for approval before the call goes through. If they decline, stop and say so.`,
     '3. vouch_certify with the invoice_id and the ZEC needed.',
     '4. vouch_settle with the invoice_id, a short description and the price.',
     '5. get-invoice-by-id to report the invoice status, and any redemption details only if the invoice is complete.',
@@ -145,7 +145,14 @@ async function agent(prompt: string, yes: boolean) {
     for (let turn = 0; turn < MAX_TURNS; turn++) {
       const { text, calls } = await model.turn()
       for (const t of text) say(`\n${t}`)
-      if (!calls.length) return
+      if (!calls.length) {
+        // the model stopped to ask or to report: answer it, or press Enter to finish
+        if (!process.stdin.isTTY) return
+        const reply = await ask('\nyou ▸ ')
+        if (!reply || /^(exit|quit|done)$/i.test(reply)) return
+        model.reply(reply)
+        continue
+      }
       const results: ToolResult[] = []
       for (const u of calls) {
         try {
