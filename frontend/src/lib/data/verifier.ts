@@ -149,15 +149,17 @@ export function toBytes(input: string | Uint8Array): Uint8Array {
 /**
  * `count` adds the verdict to the public /api/stats counter: for checks a person asked for, not the
  * site's own. `policy` is what this verifier additionally requires (freshness, "unmoved since").
+ * `now` (unix seconds) evaluates expiry as of another moment; the default is the present.
  */
 export async function verify(
   input: string | Uint8Array,
   audience: string,
-  { count = false, policy, seen }: { count?: boolean; policy?: Policy; seen?: string[] } = {},
+  { count = false, policy, seen, now: at }: { count?: boolean; policy?: Policy; seen?: string[]; now?: number } = {},
 ): Promise<VerificationResult> {
   const [wasm, table, revoked] = await Promise.all([loadVerifier(), loadAnchors(), loadRevocations()])
   const bytes = toBytes(input)
-  const now = Math.floor(Date.now() / 1000)
+  // `now` evaluates as of another time: a receipt checks its certificate as of the payment
+  const now = at ?? Math.floor(Date.now() / 1000)
   const { json, ms: elapsedMs } = await wasm.verify(bytes, audience, now, JSON.stringify(table), JSON.stringify(revoked), extra(policy, seen))
   const raw = JSON.parse(json) as RawResult
   if (count) void recordVerdict(raw.verdict.kind)

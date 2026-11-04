@@ -1,5 +1,5 @@
-// BLAKE2b (RFC 7693), unkeyed, variable output length.
-// Used for the .pof body checksum and for deterministic fixture material.
+// BLAKE2b (RFC 7693), unkeyed, variable output length, optional 16-byte personalisation.
+// Used for the .pof body checksum, deterministic fixture material and the intent binding.
 // BigInt lanes: slow in absolute terms, but proofs are a few KB and this runs in < 5ms.
 
 const M64 = (1n << 64n) - 1n
@@ -62,10 +62,16 @@ function compress(h: bigint[], block: Uint8Array, t: bigint, last: boolean) {
   for (let i = 0; i < 8; i++) h[i] = h[i]! ^ v[i]! ^ v[i + 8]!
 }
 
-export function blake2b(input: Uint8Array, outlen = 32): Uint8Array {
+export function blake2b(input: Uint8Array, outlen = 32, personal?: Uint8Array): Uint8Array {
   if (outlen < 1 || outlen > 64) throw new RangeError('blake2b: outlen must be 1..64')
+  if (personal && personal.length !== 16) throw new RangeError('blake2b: personal must be 16 bytes')
   const h = [...IV]
   h[0] = h[0]! ^ (0x01010000n ^ BigInt(outlen))
+  if (personal) {
+    // parameter block bytes 48..63: XORed into h[6] and h[7], little-endian
+    const pv = new DataView(personal.buffer, personal.byteOffset, 16)
+    for (let i = 0; i < 2; i++) h[6 + i] = h[6 + i]! ^ ((BigInt(pv.getUint32(i * 8 + 4, true)) << 32n) | BigInt(pv.getUint32(i * 8, true)))
+  }
 
   let t = 0n
   let offset = 0
