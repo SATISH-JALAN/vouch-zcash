@@ -1,0 +1,227 @@
+use group::{
+    Curve,
+    ff::{Field, PrimeField},
+};
+
+use super::{Argument, IdentityCells, ProvingKey, VerifyingKey};
+use crate::{
+    arithmetic::CurveAffine,
+    plonk::{Any, Column, Error},
+    poly::{
+        EvaluationDomain, ProvingKeyTwiddles,
+        commitment::{Blind, Params},
+    },
+};
+
+#[derive(Debug)]
+pub(crate) struct Assembly {
+    columns: Vec<Column<Any>>,
+    pub(crate) mapping: Vec<Vec<(usize, usize)>>,
+    aux: Vec<Vec<(usize, usize)>>,
+    sizes: Vec<Vec<usize>>,
+}
+
+impl Assembly {
+    pub(crate) fn new(n: usize, p: &Argument) -> Self {
+        // Initialize the copy vector to keep track of copy constraints in all
+        // the permutation arguments.
+        let mut columns = vec![];
+        for i in 0..p.columns.len() {
+            // Computes [(i, 0), (i, 1), ..., (i, n - 1)]
+            columns.push((0..n).map(|j| (i, j)).collect());
+        }
+
+        // Before any equality constraints are applied, every cell in the permutation is
+        // in a 1-cycle; therefore mapping and aux are identical, because every cell is
+        // its own distinguished element.
+        Assembly {
+            columns: p.columns.clone(),
+            mapping: columns.clone(),
+            aux: columns,
+            sizes: vec![vec![1usize; n]; p.columns.len()],
+        }
+    }
+
+    pub(crate) fn copy(
+        &mut self,
+        left_column: Column<Any>,
+        left_row: usize,
+        right_column: Column<Any>,
+        right_row: usize,
+    ) -> Result<(), Error> {
+        let left_column = self
+            .columns
+            .iter()
+            .position(|c| c == &left_column)
+            .ok_or(Error::ColumnNotInPermutation(left_column))?;
+        let right_column = self
+            .columns
+            .iter()
+            .position(|c| c == &right_column)
+            .ok_or(Error::ColumnNotInPermutation(right_column))?;
+
+        // Check bounds
+        if left_row >= self.mapping[left_column].len()
+            || right_row >= self.mapping[right_column].len()
+        {
+            return Err(Error::BoundsFailure);
+        }
+
+        // See book/src/design/permutation.md for a description of this algorithm.
+
+        let mut left_cycle = self.aux[left_column][left_row];
+        let mut right_cycle = self.aux[right_column][right_row];
+
+        // If left and right are in the same cycle, do nothing.
+        if left_cycle == right_cycle {
+            return Ok(());
+        }
+
+        if self.sizes[left_cycle.0][left_cycle.1] < self.sizes[right_cycle.0][right_cycle.1] {
+            std::mem::swap(&mut left_cycle, &mut right_cycle);
+        }
+
+        // Merge the right cycle into the left one.
+        self.sizes[left_cycle.0][left_cycle.1] += self.sizes[right_cycle.0][right_cycle.1];
+        let mut i = right_cycle;
+        loop {
+            self.aux[i.0][i.1] = left_cycle;
+            i = self.mapping[i.0][i.1];
+            if i == right_cycle {
+                break;
+            }
+        }
+
+        let tmp = self.mapping[left_column][left_row];
+        self.mapping[left_column][left_row] = self.mapping[right_column][right_row];
+        self.mapping[right_column][right_row] = tmp;
+
+        Ok(())
+    }
+
+    pub(crate) fn build_vk<C: CurveAffine>(
+        self,
+        params: &Params<C>,
+        domain: &EvaluationDomain<C::Scalar>,
+        p: &Argument,
+    ) -> VerifyingKey<C> {
+        #[cfg(feature = "multicore")]
+        use maybe_rayon::prelude::*;
+
+        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
+        let mut omega_powers = Vec::with_capacity(params.n as usize);
+        {
+            let mut cur = C::Scalar::ONE;
+            for _ in 0..params.n {
+                omega_powers.push(cur);
+                cur *= &domain.get_omega();
+            }
+        }
+
+        // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
+        let mut deltaomega = Vec::with_capacity(p.columns.len());
+        {
+            let mut cur = C::Scalar::ONE;
+            for _ in 0..p.columns.len() {
+                let mut omega_powers = omega_powers.clone();
+                for o in &mut omega_powers {
+                    *o *= &cur;
+                }
+
+                deltaomega.push(omega_powers);
+
+                cur *= &C::Scalar::DELTA;
+            }
+        }
+
+        // Pre-compute commitments for the URS.
+        let mut permutation_polys = Vec::with_capacity(p.columns.len());
+        for i in 0..p.columns.len() {
+            // Computes the permutation polynomial based on the permutation
+            // description in the assembly.
+            let mut permutation_poly = domain.empty_lagrange();
+            for (j, p) in permutation_poly.iter_mut().enumerate() {
+                let (permuted_i, permuted_j) = self.mapping[i][j];
+                *p = deltaomega[permuted_i][permuted_j];
+            }
+
+            permutation_polys.push(permutation_poly);
+        }
+
+        #[cfg(feature = "multicore")]
+        let commitments_projective = permutation_polys
+            .par_iter()
+            .map(|polynomial| params.commit_lagrange(polynomial, Blind::default()))
+            .collect::<Vec<_>>();
+        #[cfg(not(feature = "multicore"))]
+        let commitments_projective = permutation_polys
+            .iter()
+            .map(|polynomial| params.commit_lagrange(polynomial, Blind::default()))
+            .collect::<Vec<_>>();
+        let mut commitments = vec![C::identity(); commitments_projective.len()];
+        C::Curve::batch_normalize(&commitments_projective, &mut commitments);
+        VerifyingKey { commitments }
+    }
+
+    pub(crate) fn build_pk<C: CurveAffine>(
+        self,
+        params: &Params<C>,
+        domain: &EvaluationDomain<C::Scalar>,
+        p: &Argument,
+        fft_twiddles: &ProvingKeyTwiddles<C::Scalar>,
+    ) -> ProvingKey<C> {
+        // Retain the cells that the permutation leaves fixed. The prover can
+        // cancel these factors before constructing each grand-product ratio.
+        let identity_cells = IdentityCells::from_mapping(&self.mapping);
+        let identity_columns = identity_cells.identity_columns(params.n as usize);
+
+        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
+        let mut omega_powers = Vec::with_capacity(params.n as usize);
+        {
+            let mut cur = C::Scalar::ONE;
+            for _ in 0..params.n {
+                omega_powers.push(cur);
+                cur *= &domain.get_omega();
+            }
+        }
+
+        // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
+        let mut deltaomega = Vec::with_capacity(p.columns.len());
+        {
+            let mut cur = C::Scalar::ONE;
+            for _ in 0..p.columns.len() {
+                let mut omega_powers = omega_powers.clone();
+                for o in &mut omega_powers {
+                    *o *= &cur;
+                }
+
+                deltaomega.push(omega_powers);
+
+                cur *= &C::Scalar::DELTA;
+            }
+        }
+
+        // Compute permutation polynomials, convert to coset form.
+        let mut permutations = vec![];
+        for i in 0..p.columns.len() {
+            // Computes the permutation polynomial based on the permutation
+            // description in the assembly.
+            let mut permutation_poly = domain.empty_lagrange();
+            for (j, p) in permutation_poly.iter_mut().enumerate() {
+                let (permuted_i, permuted_j) = self.mapping[i][j];
+                *p = deltaomega[permuted_i][permuted_j];
+            }
+
+            permutations.push(permutation_poly);
+        }
+        let (polys, cosets) =
+            domain.batch_lagrange_to_coeff_and_extended(&permutations, fft_twiddles);
+        ProvingKey {
+            permutations,
+            identity_columns,
+            identity_cells,
+            polys,
+            cosets,
+        }
+    }
+}

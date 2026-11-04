@@ -1,0 +1,896 @@
+{
+  "address": "J6ewFZAzcTkbVsYNBrcZvzdBtTTUK5UrpqCg9jiNyra1",
+  "metadata": {
+    "name": "pof_credit",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "draw",
+      "discriminator": [
+        61,
+        40,
+        62,
+        184,
+        31,
+        176,
+        24,
+        130
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "Pool"
+              }
+            ]
+          },
+          "relations": [
+            "line"
+          ]
+        },
+        {
+          "name": "line",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  110,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "line.opened_against",
+                "account": "CreditLine"
+              },
+              {
+                "kind": "account",
+                "path": "borrower"
+              }
+            ]
+          }
+        },
+        {
+          "name": "borrower",
+          "signer": true,
+          "relations": [
+            "line"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "pool"
+          ]
+        },
+        {
+          "name": "borrower_token",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "init_pool",
+      "discriminator": [
+        116,
+        233,
+        199,
+        204,
+        115,
+        159,
+        171,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The pool's creator must control the mint: nobody can open a pool under someone else's asset."
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "audience",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "required_zatoshi",
+          "type": "u64"
+        },
+        {
+          "name": "line_limit",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "open_line",
+      "discriminator": [
+        99,
+        104,
+        130,
+        198,
+        128,
+        34,
+        27,
+        208
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "writable": true
+        },
+        {
+          "name": "line",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  110,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt.subject",
+                "account": "ClaimReceipt"
+              },
+              {
+                "kind": "account",
+                "path": "borrower"
+              }
+            ]
+          }
+        },
+        {
+          "name": "borrower",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Pays the line's rent, so a borrower needs no SOL (in the demo, the relayer)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "consumer",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  115,
+                  117,
+                  109,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "consumer_program",
+          "docs": [
+            "This program, named to pof-gate as the consumer."
+          ],
+          "address": "J6ewFZAzcTkbVsYNBrcZvzdBtTTUK5UrpqCg9jiNyra1"
+        },
+        {
+          "name": "gate_program",
+          "address": "A6WmRTgEAHC9GHstaj9oD8woVNRw9jgu31bpKVREXn8C"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "refresh_line",
+      "docs": [
+        "Present a new proof for an open line. The receipt must meet the pool's terms like the one",
+        "that opened the line, and its anchor must be no older than the line's last."
+      ],
+      "discriminator": [
+        253,
+        203,
+        218,
+        170,
+        54,
+        222,
+        187,
+        129
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "Pool"
+              }
+            ]
+          },
+          "relations": [
+            "line"
+          ]
+        },
+        {
+          "name": "line",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  110,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "line.opened_against",
+                "account": "CreditLine"
+              },
+              {
+                "kind": "account",
+                "path": "borrower"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "writable": true
+        },
+        {
+          "name": "borrower",
+          "signer": true,
+          "relations": [
+            "line"
+          ]
+        },
+        {
+          "name": "consumer",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  115,
+                  117,
+                  109,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "consumer_program",
+          "docs": [
+            "This program, named to pof-gate as the consumer."
+          ],
+          "address": "J6ewFZAzcTkbVsYNBrcZvzdBtTTUK5UrpqCg9jiNyra1"
+        },
+        {
+          "name": "gate_program",
+          "address": "A6WmRTgEAHC9GHstaj9oD8woVNRw9jgu31bpKVREXn8C"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_freshness",
+      "docs": [
+        "The pool's authority sets how long a proof keeps a line drawable, and the oldest Zcash",
+        "anchor the pool accepts when a line is opened or refreshed."
+      ],
+      "discriminator": [
+        85,
+        217,
+        212,
+        155,
+        134,
+        19,
+        53,
+        242
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool.mint",
+                "account": "Pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "pool"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "fresh_secs",
+          "type": "i64"
+        },
+        {
+          "name": "min_anchor_height",
+          "type": "u32"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "CreditLine",
+      "discriminator": [
+        220,
+        226,
+        205,
+        24,
+        220,
+        151,
+        129,
+        104
+      ]
+    },
+    {
+      "name": "Pool",
+      "discriminator": [
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "FreshnessChanged",
+      "discriminator": [
+        87,
+        115,
+        74,
+        12,
+        232,
+        63,
+        70,
+        123
+      ]
+    },
+    {
+      "name": "LineOpened",
+      "discriminator": [
+        200,
+        206,
+        237,
+        128,
+        16,
+        167,
+        83,
+        72
+      ]
+    },
+    {
+      "name": "LineRefreshed",
+      "discriminator": [
+        29,
+        152,
+        131,
+        99,
+        112,
+        6,
+        107,
+        242
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "BadTerms",
+      "msg": "terms must be non-zero"
+    },
+    {
+      "code": 6001,
+      "name": "WrongAudience",
+      "msg": "the proof was made for a different verifier"
+    },
+    {
+      "code": 6002,
+      "name": "BelowThreshold",
+      "msg": "the proven amount is below this pool's threshold"
+    },
+    {
+      "code": 6003,
+      "name": "NotBoundToSigner",
+      "msg": "the signer is not the account the proof is bound to"
+    },
+    {
+      "code": 6004,
+      "name": "ReceiptConsumed",
+      "msg": "this receipt has already funded a line"
+    },
+    {
+      "code": 6005,
+      "name": "ProofExpired",
+      "msg": "the proof has expired"
+    },
+    {
+      "code": 6006,
+      "name": "OverLimit",
+      "msg": "draw exceeds the line's limit"
+    },
+    {
+      "code": 6007,
+      "name": "AnchorTooOld",
+      "msg": "the proof is older than this pool accepts: present a newer one"
+    },
+    {
+      "code": 6008,
+      "name": "NeedsFreshProof",
+      "msg": "the line's latest proof is no longer fresh: refresh it with a new proof"
+    }
+  ],
+  "types": [
+    {
+      "name": "ClaimReceipt",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subject",
+            "docs": [
+              "blake2b(statement): one proof, one receipt."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "beneficiary",
+            "docs": [
+              "The Solana account the proof is bound to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "audience",
+            "docs": [
+              "blake2b of the verifier identifier the proof was made for."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "claim_kind",
+            "type": "u8"
+          },
+          {
+            "name": "claim_value",
+            "type": "u64"
+          },
+          {
+            "name": "anchor_height",
+            "type": "u32"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "attested_slot",
+            "type": "u64"
+          },
+          {
+            "name": "signers",
+            "type": "u8"
+          },
+          {
+            "name": "created_slot",
+            "type": "u64"
+          },
+          {
+            "name": "consumed",
+            "type": "bool"
+          },
+          {
+            "name": "consumed_by",
+            "docs": [
+              "The consumer program that spent it."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreditLine",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "borrower",
+            "type": "pubkey"
+          },
+          {
+            "name": "limit",
+            "type": "u64"
+          },
+          {
+            "name": "drawn",
+            "type": "u64"
+          },
+          {
+            "name": "opened_against",
+            "docs": [
+              "The receipt subject (proof id) this line was opened against."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "anchor_height",
+            "docs": [
+              "The anchor of the latest proof: the one that opened the line, or the last refresh."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "opened_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "fresh_until",
+            "docs": [
+              "Draws are refused from this time on, until a refresh."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "refreshed_against",
+            "docs": [
+              "The receipt subject of the latest proof."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "refreshes",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FreshnessChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "fresh_secs",
+            "type": "i64"
+          },
+          {
+            "name": "min_anchor_height",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LineOpened",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "line",
+            "type": "pubkey"
+          },
+          {
+            "name": "borrower",
+            "type": "pubkey"
+          },
+          {
+            "name": "limit",
+            "type": "u64"
+          },
+          {
+            "name": "against",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LineRefreshed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "line",
+            "type": "pubkey"
+          },
+          {
+            "name": "against",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "anchor_height",
+            "type": "u32"
+          },
+          {
+            "name": "fresh_until",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Pool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "audience",
+            "docs": [
+              "blake2b(\"pof-audience:\" ‖ identifier). Proofs for anyone else are refused."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "required_zatoshi",
+            "type": "u64"
+          },
+          {
+            "name": "line_limit",
+            "docs": [
+              "Per-line limit, in the mint's base units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "fresh_secs",
+            "docs": [
+              "How long a proof keeps a line drawable, in seconds."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "min_anchor_height",
+            "docs": [
+              "The oldest Zcash anchor height accepted when a line is opened or refreshed."
+            ],
+            "type": "u32"
+          }
+        ]
+      }
+    }
+  ]
+}

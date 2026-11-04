@@ -1,0 +1,545 @@
+{
+  "about": "Encoded proof-request links (the r= value) and whether a v1 prover must accept them. Checked by the pof-prove request tests and frontend/scripts/verify-fixtures.ts. `json`, where present, is the decoded text. Integer-valued floats such as 7.0 or 1e3 are deliberately absent: JSON.parse cannot tell them from integers, and serde refuses them.",
+  "cases": [
+    {
+      "name": "minimal",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "every optional field",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"id\":\"0123456789abcdef\",\"respondBy\":1790208000,\"bind\":\"solana\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImlkIjoiMDEyMzQ1Njc4OWFiY2RlZiIsInJlc3BvbmRCeSI6MTc5MDIwODAwMCwiYmluZCI6InNvbGFuYSJ9"
+    },
+    {
+      "name": "explicit nulls are absent",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"id\":null,\"respondBy\":null,\"bind\":null}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImlkIjpudWxsLCJyZXNwb25kQnkiOm51bGwsImJpbmQiOm51bGx9"
+    },
+    {
+      "name": "smallest threshold, 0.125 ZEC",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"12500000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMjUwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "largest threshold, 21M ZEC",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"2100000000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIyMTAwMDAwMDAwMDAwMDAwIiwiYXVkaWVuY2UiOiJwb2YtY3JlZGl0OnVzZGMtcG9vbC0xIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "leading zeros are the same number",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"0050000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIwMDUwMDAwMDAwMDAwIiwiYXVkaWVuY2UiOiJwb2YtY3JlZGl0OnVzZGMtcG9vbC0xIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "audience with outer spaces and punctuation",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"  Acme OTC Desk (EU) #1 ~ \",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiICBBY21lIE9UQyBEZXNrIChFVSkgIzEgfiAiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "expiry 1 day",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":1}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjF9"
+    },
+    {
+      "name": "expiry 365 days",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":365}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjM2NX0"
+    },
+    {
+      "name": "respondBy 1",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"respondBy\":1}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsInJlc3BvbmRCeSI6MX0"
+    },
+    {
+      "name": "respondBy 2^53-1",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"respondBy\":9007199254740991}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsInJlc3BvbmRCeSI6OTAwNzE5OTI1NDc0MDk5MX0"
+    },
+    {
+      "name": "duplicate key: the last one wins",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"1\",\"zatoshi\":\"50000000000\",\"audience\":\"acme\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxIiwiemF0b3NoaSI6IjUwMDAwMDAwMDAwIiwiYXVkaWVuY2UiOiJhY21lIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "insignificant JSON whitespace",
+      "ok": true,
+      "json": " {\n \"v\": 1, \"claim\": \"HoldsAtLeast\", \"zatoshi\": \"50000000000\", \"audience\": \"acme\", \"expiryDays\": 7 }\n",
+      "r": "IHsKICJ2IjogMSwgImNsYWltIjogIkhvbGRzQXRMZWFzdCIsICJ6YXRvc2hpIjogIjUwMDAwMDAwMDAwIiwgImF1ZGllbmNlIjogImFjbWUiLCAiZXhwaXJ5RGF5cyI6IDcgfQo"
+    },
+    {
+      "name": "link wrapped across lines",
+      "ok": true,
+      "r": "  eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQX\r\nRMZWFzdCIsInphdG9zaGkiOiI1MDAw\tMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9 \n"
+    },
+    {
+      "name": "zatoshi with a plus sign",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"+50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIrNTAwMDAwMDAwMDAiLCJhdWRpZW5jZSI6InBvZi1jcmVkaXQ6dXNkYy1wb29sLTEiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "zatoshi negative",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"-12500000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiItMTI1MDAwMDAiLCJhdWRpZW5jZSI6InBvZi1jcmVkaXQ6dXNkYy1wb29sLTEiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "zatoshi with a space",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\" 50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIgNTAwMDAwMDAwMDAiLCJhdWRpZW5jZSI6InBvZi1jcmVkaXQ6dXNkYy1wb29sLTEiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "zatoshi empty",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIiLCJhdWRpZW5jZSI6InBvZi1jcmVkaXQ6dXNkYy1wb29sLTEiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "zatoshi as a number",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":50000000000,\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOjUwMDAwMDAwMDAwLCJhdWRpZW5jZSI6InBvZi1jcmVkaXQ6dXNkYy1wb29sLTEiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "zatoshi with a decimal point",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000.0\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMC4wIiwiYXVkaWVuY2UiOiJwb2YtY3JlZGl0OnVzZGMtcG9vbC0xIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "zatoshi in fullwidth digits",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"５００００００００００\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiLvvJXvvJDvvJDvvJDvvJDvvJDvvJDvvJDvvJDvvJDvvJAiLCJhdWRpZW5jZSI6InBvZi1jcmVkaXQ6dXNkYy1wb29sLTEiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "zatoshi zero",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"0\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIwIiwiYXVkaWVuY2UiOiJwb2YtY3JlZGl0OnVzZGMtcG9vbC0xIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "zatoshi above 21M ZEC",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"2100000012500000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIyMTAwMDAwMDEyNTAwMDAwIiwiYXVkaWVuY2UiOiJwb2YtY3JlZGl0OnVzZGMtcG9vbC0xIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "zatoshi above u64",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"18446744073709551616\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxODQ0Njc0NDA3MzcwOTU1MTYxNiIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "zatoshi not a multiple of 0.125 ZEC",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000001\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMSIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "zatoshi missing",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "bind to another chain",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"bind\":\"ethereum\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImJpbmQiOiJldGhlcmV1bSJ9"
+    },
+    {
+      "name": "bind empty",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"bind\":\"\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImJpbmQiOiIifQ"
+    },
+    {
+      "name": "bind uppercase",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"bind\":\"Solana\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImJpbmQiOiJTb2xhbmEifQ"
+    },
+    {
+      "name": "bind true",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"bind\":true}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImJpbmQiOnRydWV9"
+    },
+    {
+      "name": "id uppercase hex",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"id\":\"0123456789ABCDEF\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImlkIjoiMDEyMzQ1Njc4OUFCQ0RFRiJ9"
+    },
+    {
+      "name": "id too short",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"id\":\"0123456789abcde\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImlkIjoiMDEyMzQ1Njc4OWFiY2RlIn0"
+    },
+    {
+      "name": "id too long",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"id\":\"0123456789abcdef0\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImlkIjoiMDEyMzQ1Njc4OWFiY2RlZjAifQ"
+    },
+    {
+      "name": "id empty",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"id\":\"\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImlkIjoiIn0"
+    },
+    {
+      "name": "id not hex",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"id\":\"0123456789abcdeg\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImlkIjoiMDEyMzQ1Njc4OWFiY2RlZyJ9"
+    },
+    {
+      "name": "id as a number",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"id\":1234567890123456}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsImlkIjoxMjM0NTY3ODkwMTIzNDU2fQ"
+    },
+    {
+      "name": "respondBy zero",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"respondBy\":0}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsInJlc3BvbmRCeSI6MH0"
+    },
+    {
+      "name": "respondBy negative",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"respondBy\":-1}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsInJlc3BvbmRCeSI6LTF9"
+    },
+    {
+      "name": "respondBy fractional",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"respondBy\":1790208000.5}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsInJlc3BvbmRCeSI6MTc5MDIwODAwMC41fQ"
+    },
+    {
+      "name": "respondBy 2^53",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"respondBy\":9007199254740992}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsInJlc3BvbmRCeSI6OTAwNzE5OTI1NDc0MDk5Mn0"
+    },
+    {
+      "name": "respondBy as a string",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"respondBy\":\"1790208000\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsInJlc3BvbmRCeSI6IjE3OTAyMDgwMDAifQ"
+    },
+    {
+      "name": "audience empty",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "audience only spaces",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"   \",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiICAgIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "audience with a tab",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"acme\\tdesk\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiYWNtZVx0ZGVzayIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "audience with a newline",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"acme\\n\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiYWNtZVxuIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "audience with DEL",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"acme\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiYWNtZX8iLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "audience non-ASCII letter",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"Café\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiQ2Fmw6kiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "audience non-breaking space",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\" acme\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiwqBhY21lIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "audience Kelvin sign (lowercases to k)",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"Kelvin\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoi4oSqZWx2aW4iLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "audience as a number",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":7,\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjo3LCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "audience null",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":null,\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjpudWxsLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "audience lone surrogate",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"acme\\ud800\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiYWNtZVx1ZDgwMCIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "expiry 0 days",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":0}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjB9"
+    },
+    {
+      "name": "expiry 366 days",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":366}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjM2Nn0"
+    },
+    {
+      "name": "expiry fractional",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7.5}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcuNX0"
+    },
+    {
+      "name": "expiry as a string",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":\"7\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOiI3In0"
+    },
+    {
+      "name": "expiry missing",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSJ9"
+    },
+    {
+      "name": "version 2",
+      "ok": false,
+      "json": "{\"v\":2,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoyLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "version as a string",
+      "ok": false,
+      "json": "{\"v\":\"1\",\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoiMSIsImNsYWltIjoiSG9sZHNBdExlYXN0IiwiemF0b3NoaSI6IjUwMDAwMDAwMDAwIiwiYXVkaWVuY2UiOiJwb2YtY3JlZGl0OnVzZGMtcG9vbC0xIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "version missing",
+      "ok": false,
+      "json": "{\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "claim on the roadmap",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"ReceivedPayment\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IlJlY2VpdmVkUGF5bWVudCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "claim not provable",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsExactly\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzRXhhY3RseSIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "claim unknown",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtMost\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRNb3N0IiwiemF0b3NoaSI6IjUwMDAwMDAwMDAwIiwiYXVkaWVuY2UiOiJwb2YtY3JlZGl0OnVzZGMtcG9vbC0xIiwiZXhwaXJ5RGF5cyI6N30"
+    },
+    {
+      "name": "claim missing",
+      "ok": false,
+      "json": "{\"v\":1,\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJ6YXRvc2hpIjoiNTAwMDAwMDAwMDAiLCJhdWRpZW5jZSI6InBvZi1jcmVkaXQ6dXNkYy1wb29sLTEiLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "unknown field",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"memo\":\"hi\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsIm1lbW8iOiJoaSJ9"
+    },
+    {
+      "name": "unknown field set to null",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7,\"memo\":null}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjcsIm1lbW8iOm51bGx9"
+    },
+    {
+      "name": "top level array",
+      "ok": false,
+      "json": "[1,\"HoldsAtLeast\",\"50000000000\",\"pof-credit:usdc-pool-1\",7]",
+      "r": "WzEsIkhvbGRzQXRMZWFzdCIsIjUwMDAwMDAwMDAwIiwicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsN10"
+    },
+    {
+      "name": "top level null",
+      "ok": false,
+      "json": "null",
+      "r": "bnVsbA"
+    },
+    {
+      "name": "top level string",
+      "ok": false,
+      "json": "\"HoldsAtLeast\"",
+      "r": "IkhvbGRzQXRMZWFzdCI"
+    },
+    {
+      "name": "trailing garbage",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"pof-credit:usdc-pool-1\",\"expiryDays\":7}x",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9eA"
+    },
+    {
+      "name": "empty",
+      "ok": false,
+      "json": "",
+      "r": ""
+    },
+    {
+      "name": "leading byte-order mark",
+      "ok": false,
+      "r": "77u_eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "invalid UTF-8 in the audience",
+      "ok": false,
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiYWNtZf8iLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "not base64",
+      "ok": false,
+      "r": "!!!"
+    },
+    {
+      "name": "the same request in base64url",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"50000000000\",\"audience\":\"acme>?~?\",\"expiryDays\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiYWNtZT4_fj8iLCJleHBpcnlEYXlzIjo3fQ"
+    },
+    {
+      "name": "standard base64 with padding",
+      "ok": false,
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoiYWNtZT4/fj8iLCJleHBpcnlEYXlzIjo3fQ=="
+    },
+    {
+      "name": "link text around the value",
+      "ok": false,
+      "r": "https://vouch.example/prove?r=eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiI1MDAwMDAwMDAwMCIsImF1ZGllbmNlIjoicG9mLWNyZWRpdDp1c2RjLXBvb2wtMSIsImV4cGlyeURheXMiOjd9"
+    },
+    {
+      "name": "exit with period and unmoved-since",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"kind\":\"exit\",\"epoch\":202610,\"dormantSince\":4410000}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6Nywia2luZCI6ImV4aXQiLCJlcG9jaCI6MjAyNjEwLCJkb3JtYW50U2luY2UiOjQ0MTAwMDB9"
+    },
+    {
+      "name": "reserves kind",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"kind\":\"reserves\",\"epoch\":7}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6Nywia2luZCI6InJlc2VydmVzIiwiZXBvY2giOjd9"
+    },
+    {
+      "name": "period zero",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"epoch\":0}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZXBvY2giOjB9"
+    },
+    {
+      "name": "period at 2^53-1",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"epoch\":9007199254740991}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZXBvY2giOjkwMDcxOTkyNTQ3NDA5OTF9"
+    },
+    {
+      "name": "period above 2^53-1",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"epoch\":9007199254740992}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZXBvY2giOjkwMDcxOTkyNTQ3NDA5OTJ9"
+    },
+    {
+      "name": "period negative",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"epoch\":-1}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZXBvY2giOi0xfQ"
+    },
+    {
+      "name": "period fractional",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"epoch\":1.5}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZXBvY2giOjEuNX0"
+    },
+    {
+      "name": "period as a string",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"epoch\":\"7\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZXBvY2giOiI3In0"
+    },
+    {
+      "name": "kind unknown",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"kind\":\"loan\"}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6Nywia2luZCI6ImxvYW4ifQ"
+    },
+    {
+      "name": "kind as a number",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"kind\":1}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6Nywia2luZCI6MX0"
+    },
+    {
+      "name": "unmoved-since not a checkpoint",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"dormantSince\":4410001}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZG9ybWFudFNpbmNlIjo0NDEwMDAxfQ"
+    },
+    {
+      "name": "unmoved-since zero",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"dormantSince\":0}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZG9ybWFudFNpbmNlIjowfQ"
+    },
+    {
+      "name": "unmoved-since above u32",
+      "ok": false,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"dormantSince\":4294968000}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZG9ybWFudFNpbmNlIjo0Mjk0OTY4MDAwfQ"
+    },
+    {
+      "name": "unmoved-since null is absent",
+      "ok": true,
+      "json": "{\"v\":1,\"claim\":\"HoldsAtLeast\",\"zatoshi\":\"100000000\",\"audience\":\"rail:near-intents\",\"expiryDays\":7,\"dormantSince\":null}",
+      "r": "eyJ2IjoxLCJjbGFpbSI6IkhvbGRzQXRMZWFzdCIsInphdG9zaGkiOiIxMDAwMDAwMDAiLCJhdWRpZW5jZSI6InJhaWw6bmVhci1pbnRlbnRzIiwiZXhwaXJ5RGF5cyI6NywiZG9ybWFudFNpbmNlIjpudWxsfQ"
+    }
+  ]
+}

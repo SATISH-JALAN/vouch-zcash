@@ -1,0 +1,109 @@
+{
+  "audience": "pof-credit:usdc-pool-1",
+  "batches": {
+    "reserves": {
+      "audience": "reserves:wzec-demo",
+      "kind": "Valid",
+      "totalZatoshi": 401812500000
+    },
+    "reserves-double": {
+      "audience": "reserves:wzec-demo",
+      "kind": "Invalid",
+      "member": 1
+    }
+  },
+  "evaluatedAt": 1790208000,
+  "expected": {
+    "already-used": {
+      "audience": "pof-credit:usdc-pool-1",
+      "policy": {
+        "epoch": 95087216934683
+      },
+      "seen": [
+        "2f910386438b5add4335a6b26f267608855cf2b8214d8fbc690503582d876827",
+        "ae8b24f32c3dda56fc7ef25c36e9091c5f42b06b47eef5395415da5335261223",
+        "068568ee53476826eb3333667dfea379ce9b0f6736b0e564f94658fbed03c324",
+        "a5dbf32f67bbee685249ec581e7990fa30be2d1392e26de01db19ea9ae3d2739",
+        "5250c1dc42f9382d2c4431a105321c7c7012d5f57ecb5a7c9a5fe15d9bf9e71e"
+      ],
+      "verdict": "AlreadyUsed"
+    },
+    "anchor-mismatch": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "AnchorNotFound"
+    },
+    "anchor-too-old": {
+      "audience": "pof-credit:usdc-pool-1",
+      "policy": {
+        "maxAnchorAge": 1000,
+        "tipHeight": 3493040
+      },
+      "verdict": "AnchorTooOld"
+    },
+    "dormant": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "Valid"
+    },
+    "dormant-too-young": {
+      "audience": "pof-credit:usdc-pool-1",
+      "policy": {
+        "dormantSince": 3480000
+      },
+      "verdict": "NotDormantLongEnough"
+    },
+    "exit": {
+      "audience": "rail:demo",
+      "policy": {
+        "epoch": 202610
+      },
+      "verdict": "Valid"
+    },
+    "expired": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "Expired"
+    },
+    "extended-expiry": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "ProofInvalid"
+    },
+    "forged-claim": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "ProofInvalid"
+    },
+    "onchain": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "Valid"
+    },
+    "readdressed": {
+      "audience": "otc-desk:someone-else",
+      "verdict": "ProofInvalid"
+    },
+    "revoked": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "Revoked"
+    },
+    "tampered": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "ProofInvalid"
+    },
+    "threshold-4000": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "Valid"
+    },
+    "valid": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "Valid"
+    },
+    "wrong-audience": {
+      "audience": "pof-credit:usdc-pool-1",
+      "verdict": "WrongAudience"
+    },
+    "wrong-period": {
+      "audience": "pof-credit:usdc-pool-1",
+      "policy": {
+        "epoch": 95087216934684
+      },
+      "verdict": "WrongScope"
+    }
+  }
+}

@@ -1,0 +1,634 @@
+{
+  "address": "A6WmRTgEAHC9GHstaj9oD8woVNRw9jgu31bpKVREXn8C",
+  "metadata": {
+    "name": "pof_gate",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must be the program's upgrade authority: otherwise anyone could create the config first",
+            "and make themselves admin."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "program",
+          "address": "A6WmRTgEAHC9GHstaj9oD8woVNRw9jgu31bpKVREXn8C"
+        },
+        {
+          "name": "program_data"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "attestors",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "threshold",
+          "type": "u8"
+        },
+        {
+          "name": "max_age_slots",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "mark_consumed",
+      "docs": [
+        "Called by a consumer program (by CPI) to spend a receipt exactly once. The beneficiary",
+        "must sign, so nobody can burn someone else's receipt. The consumer program must sign too,",
+        "through its `[b\"consumer\"]` PDA, so the program recorded in `consumed_by` is the one that called."
+      ],
+      "discriminator": [
+        251,
+        118,
+        234,
+        3,
+        120,
+        114,
+        252,
+        61
+      ],
+      "accounts": [
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt.subject",
+                "account": "ClaimReceipt"
+              }
+            ]
+          }
+        },
+        {
+          "name": "beneficiary",
+          "signer": true
+        },
+        {
+          "name": "consumer",
+          "docs": [
+            "`[b\"consumer\"]` under `consumer_program`. Only that program can sign for it (invoke_signed),",
+            "so this signature proves which program is consuming."
+          ],
+          "signer": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  115,
+                  117,
+                  109,
+                  101,
+                  114
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "consumer_program"
+            }
+          }
+        },
+        {
+          "name": "consumer_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_attestors",
+      "discriminator": [
+        93,
+        63,
+        17,
+        49,
+        223,
+        88,
+        178,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "attestors",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "threshold",
+          "type": "u8"
+        },
+        {
+          "name": "max_age_slots",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "submit_attestation",
+      "docs": [
+        "Checks, cheapest first: layout and domain · verdict · claim kind · freshness · expiry ·",
+        "signatures (introspection) · create the receipt (fails if it exists: replay protection)."
+      ],
+      "discriminator": [
+        238,
+        220,
+        255,
+        105,
+        183,
+        211,
+        40,
+        83
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "subject"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "instructions",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "subject",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "message",
+          "type": "bytes"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ClaimReceipt",
+      "discriminator": [
+        223,
+        233,
+        11,
+        229,
+        124,
+        165,
+        207,
+        28
+      ]
+    },
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AttestorsChanged",
+      "discriminator": [
+        229,
+        127,
+        27,
+        15,
+        35,
+        154,
+        38,
+        58
+      ]
+    },
+    {
+      "name": "ReceiptConsumed",
+      "discriminator": [
+        219,
+        67,
+        53,
+        61,
+        214,
+        169,
+        72,
+        144
+      ]
+    },
+    {
+      "name": "ReceiptCreated",
+      "discriminator": [
+        53,
+        236,
+        206,
+        24,
+        194,
+        10,
+        208,
+        163
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "BadLength",
+      "msg": "attestation must be 139 bytes"
+    },
+    {
+      "code": 6001,
+      "name": "BadDomain",
+      "msg": "attestation is not domain-separated as POF-ATTEST-v1"
+    },
+    {
+      "code": 6002,
+      "name": "BadExpiry",
+      "msg": "expiry out of range"
+    },
+    {
+      "code": 6003,
+      "name": "NotValid",
+      "msg": "only Valid verdicts are accepted"
+    },
+    {
+      "code": 6004,
+      "name": "UnknownClaim",
+      "msg": "unknown claim kind"
+    },
+    {
+      "code": 6005,
+      "name": "Stale",
+      "msg": "attestation is older than max_age_slots, or from the future"
+    },
+    {
+      "code": 6006,
+      "name": "Expired",
+      "msg": "the proof behind this attestation has expired"
+    },
+    {
+      "code": 6007,
+      "name": "BadEd25519",
+      "msg": "malformed Ed25519 instruction"
+    },
+    {
+      "code": 6008,
+      "name": "ForeignOffsets",
+      "msg": "an Ed25519 signature entry points outside its own instruction"
+    },
+    {
+      "code": 6009,
+      "name": "NotEnoughSignatures",
+      "msg": "not enough allowlisted attestors signed this exact message"
+    },
+    {
+      "code": 6010,
+      "name": "AlreadyConsumed",
+      "msg": "receipt already consumed"
+    },
+    {
+      "code": 6011,
+      "name": "WrongBeneficiary",
+      "msg": "signer is not the account the proof is bound to"
+    },
+    {
+      "code": 6012,
+      "name": "BadAttestorSet",
+      "msg": "attestor set must be 1–8 distinct keys with 1 ≤ threshold ≤ count"
+    },
+    {
+      "code": 6013,
+      "name": "SubjectMismatch",
+      "msg": "the subject argument does not match the attestation"
+    },
+    {
+      "code": 6014,
+      "name": "NotUpgradeAuthority",
+      "msg": "only the program's upgrade authority can initialize it"
+    }
+  ],
+  "types": [
+    {
+      "name": "AttestorsChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold",
+            "type": "u8"
+          },
+          {
+            "name": "count",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimReceipt",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subject",
+            "docs": [
+              "blake2b(statement): one proof, one receipt."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "beneficiary",
+            "docs": [
+              "The Solana account the proof is bound to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "audience",
+            "docs": [
+              "blake2b of the verifier identifier the proof was made for."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "claim_kind",
+            "type": "u8"
+          },
+          {
+            "name": "claim_value",
+            "type": "u64"
+          },
+          {
+            "name": "anchor_height",
+            "type": "u32"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "attested_slot",
+            "type": "u64"
+          },
+          {
+            "name": "signers",
+            "type": "u8"
+          },
+          {
+            "name": "created_slot",
+            "type": "u64"
+          },
+          {
+            "name": "consumed",
+            "type": "bool"
+          },
+          {
+            "name": "consumed_by",
+            "docs": [
+              "The consumer program that spent it."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "attestors",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "threshold",
+            "type": "u8"
+          },
+          {
+            "name": "max_age_slots",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReceiptConsumed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subject",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "consumer",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReceiptCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "subject",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "claim_value",
+            "type": "u64"
+          },
+          {
+            "name": "anchor_height",
+            "type": "u32"
+          }
+        ]
+      }
+    }
+  ]
+}

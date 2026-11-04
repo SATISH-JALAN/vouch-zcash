@@ -1,0 +1,17 @@
+# Render's free instances sleep after 15 minutes without traffic and take about a minute to wake,
+# which would turn the site's /demo to SIMULATED for the first visitor. Ping the attestor's
+# /health every 10 minutes. Set the repository variable ATTESTOR_URL (Settings → Secrets and
+# variables → Actions → Variables) to e.g. https://vouch-attest.onrender.com; unset, this does nothing.
+name: keep the attestor awake
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    if: ${{ vars.ATTESTOR_URL != '' }}
+    steps:
+      - run: curl -fsS --max-time 90 "${{ vars.ATTESTOR_URL }}/health" || true

@@ -1,0 +1,72 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish the CLIs (pof-prove, pof-verify, pof-anchor) for Linux, macOS
+# and Windows as a GitHub Release. /prove and /docs/prove link to releases/latest/download/vouch-<os>.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    name: Create the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --title "Vouch $GITHUB_REF_NAME" --notes "The holder's prover, the verifier and the anchor indexer, built from $GITHUB_SHA. Hackathon build: not audited, not production ready. Each archive has a .sha256 beside it."
+
+  build:
+    name: Build · ${{ matrix.name }}
+    needs: release
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, os: ubuntu-latest, exe: '' }
+          - { name: macos-arm64, os: macos-latest, exe: '' }
+          - { name: windows-x86_64, os: windows-latest, exe: .exe }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain from backend/rust-toolchain.toml
+        working-directory: backend
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - name: Build
+        working-directory: backend
+        run: cargo build --locked --release -p pof-prove -p pof-verify -p pof-anchor
+      - name: Package
+        run: |
+          # unversioned names, so releases/latest/download/<name> always points at the newest build
+          dir="vouch-${{ matrix.name }}"
+          mkdir "$dir"
+          for b in pof-prove pof-verify pof-anchor; do cp "backend/target/release/$b${{ matrix.exe }}" "$dir/"; done
+          cp README.md LICENSE-MIT LICENSE-APACHE THIRD-PARTY.md "$dir/"
+          if [ "${{ runner.os }}" = Windows ]; then
+            7z a "$dir.zip" "$dir" >/dev/null && out="$dir.zip"
+            sha256sum "$out" > "$out.sha256"
+          else
+            tar czf "$dir.tar.gz" "$dir" && out="$dir.tar.gz"
+            shasum -a 256 "$out" > "$out.sha256"
+          fi
+          echo "OUT=$out" >> "$GITHUB_ENV"
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "$OUT" "$OUT.sha256" --clobber

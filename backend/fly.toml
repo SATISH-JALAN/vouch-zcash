@@ -1,0 +1,30 @@
+# Fly.io deploy for pof-attest. From the repo root:
+#   fly launch --no-deploy --copy-config --config backend/fly.toml    # once: pick an app name
+#   fly secrets set --config backend/fly.toml POF_ATTEST_KEY=<32-byte hex> SOLANA_RPC_URL=https://api.devnet.solana.com \
+#     POF_REVOCATIONS_URL=https://<site>/api/revocations
+#   fly deploy --config backend/fly.toml --dockerfile backend/Dockerfile .
+
+app = "vouch-attest"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+# The demo holder proves on request (two at a time); proving is CPU-bound.
+[[vm]]
+  size = "performance-2x"
+  memory = "4gb"

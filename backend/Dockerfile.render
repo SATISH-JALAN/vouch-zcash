@@ -1,0 +1,28 @@
+# pof-attest for Render's free tier (512 MB, 0.1 CPU): the verifier, the Solana attestations and
+# the rail API, without the demo holder (proving on 0.1 CPU would outlast every request timeout;
+# the site's /demo then uses the committed on-chain proof and still runs live).
+# Build context is the repo root; render.yaml points here.
+
+FROM rust:1-bookworm AS build
+WORKDIR /src/backend
+# rust-toolchain.toml pins the exact compiler; rustup installs it on first use
+COPY backend/rust-toolchain.toml ./
+RUN rustup show active-toolchain || rustup toolchain install
+COPY backend/ ./
+RUN cargo build --release --locked -p pof-attest --no-default-features --features rail && strip target/release/pof-attest
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /src/backend/target/release/pof-attest /usr/local/bin/pof-attest
+# Anchors the attestor trusts (mainnet + testnet + demo) and the demo revocation list
+COPY frontend/src/data/anchors.json /app/anchors.json
+COPY fixtures/revocations.demo.json /app/revocations.demo.json
+ENV POF_ANCHORS=/app/anchors.json \
+    POF_REVOCATIONS_FILE=/app/revocations.demo.json \
+    POF_AUDIENCE=pof-credit:usdc-pool-1 \
+    PORT=10000 \
+    RUST_LOG=info
+EXPOSE 10000
+USER nobody
+CMD ["pof-attest"]

@@ -1,0 +1,44 @@
+[
+  {
+    "network": "mainnet",
+    "height": 3493000,
+    "blockHash": "00000000000477d021dac9bc28de61cac47a915add870a5716e3865234229b0c",
+    "ncRoot": "1780a43b9054d8f45de3763df336ec4f443697b2762d397b014255d202b56a3c",
+    "nfRoot": "34da5ef38d024c99b8ec7fc464c78cda5543b06ba412c775ca9dfcb26453c336"
+  },
+  {
+    "network": "testnet",
+    "height": 4410000,
+    "blockHash": "0004894af6f7ccb01ce586669d621664e6b5ad6afd52e90ac3ff711d14901b36",
+    "ncRoot": "dc487630542d8caaf91237b99f1da076ee73c34cff5e35c5e5ace9428b3be827",
+    "nfRoot": "322fcff2c72d6acb0d0ac1bfa5f5bbf18964f375837058ccc56adc79982a3721"
+  },
+  {
+    "network": "testnet",
+    "height": 4459000,
+    "blockHash": "00b3ff263b0cd904c4f2b2ef7b0d861d97c005a15ccc6a3030222c2f0aabb420",
+    "ncRoot": "94f218a998772a28b7ea4df4d2b8851f6550c0c206255858d38a93a8c9700104",
+    "nfRoot": "f9468d5ccaef361ea0e44ffcf6012c8863a16418539a05864e3b01155db23305"
+  },
+  {
+    "network": "testnet",
+    "height": 4460391,
+    "blockHash": "0025fddf19340d2018acc217fe6ccc8c3a430a36ec40f3322b2eed2052ff4c59",
+    "ncRoot": "d83151878dc1976eaa92706151d3cf6c452a7a7c22d83d100076894059238037",
+    "nfRoot": "157230149dc27092e374035319a579df8e85f2bb7c69c40ef6feba0476c94005"
+  },
+  {
+    "network": "demo",
+    "height": 3481000,
+    "blockHash": null,
+    "ncRoot": "7cd9a74820ce97cb92f5e03f8baeed39d61aa393e362e208c30d0c1d8be2e529",
+    "nfRoot": "689d7c0c743b83eb6e149c02342b52d86e36b814e1241268cbf9d2a6b061b93a"
+  },
+  {
+    "network": "demo",
+    "height": 3491040,
+    "blockHash": null,
+    "ncRoot": "da7e8a67b49fa924883098205863b0325957aa7f6b7cd23891eb34e77b99e937",
+    "nfRoot": "689d7c0c743b83eb6e149c02342b52d86e36b814e1241268cbf9d2a6b061b93a"
+  }
+]

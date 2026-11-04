@@ -1,0 +1,550 @@
+//! Real Halo2 prove/verify for the delegation circuit (ZKP #1).
+//!
+//! Follows the same pattern as `sdk/circuits/src/toy.rs` but for the full
+//! 15-condition delegation circuit at K=12.
+
+use std::{string::String, vec::Vec};
+
+use voting_crypto_deps::halo2_proofs::{
+    pasta::EqAffine,
+    plonk::{self, keygen_pk, keygen_vk},
+    poly::commitment::Params,
+};
+
+use super::circuit::{Circuit, Instance, RevealCircuit, K};
+use crate::{
+    prove_error::{create_proof_bytes, verify_proof_bytes},
+    ProveError,
+};
+
+// ================================================================
+// Params / key generation
+// ================================================================
+
+pub type DelegationKeys = (
+    Params<EqAffine>,
+    plonk::ProvingKey<EqAffine>,
+    plonk::VerifyingKey<EqAffine>,
+);
+
+static DELEGATION_PK_CACHE: std::sync::OnceLock<Result<DelegationKeys, String>> =
+    std::sync::OnceLock::new();
+
+/// Generate the IPA params (SRS) for the delegation circuit.
+/// Deterministic for a given `K`.
+///
+/// **Expensive**: K=12 params generation takes several seconds.
+/// Callers should cache the result.
+pub fn delegation_params() -> Params<EqAffine> {
+    Params::new(K)
+}
+
+/// Generate the proving and verifying keys for the delegation circuit.
+///
+/// Uses `Circuit::default()` (all witnesses unknown) as the empty circuit
+/// for key generation — the same pattern as the Orchard action circuit.
+///
+/// **Expensive**: first call involves full circuit layout. Callers should
+/// cache the result alongside the params.
+pub fn delegation_proving_key(
+    params: &Params<EqAffine>,
+) -> Result<(plonk::ProvingKey<EqAffine>, plonk::VerifyingKey<EqAffine>), ProveError> {
+    let empty_circuit = Circuit::default();
+    let vk = keygen_vk(params, &empty_circuit).map_err(ProveError::KeygenVk)?;
+    let pk = keygen_pk(params, vk.clone(), &empty_circuit).map_err(ProveError::KeygenPk)?;
+    Ok((pk, vk))
+}
+
+/// Return cached params and proving/verifying keys for the delegation circuit.
+///
+/// Key generation is deterministic and expensive enough to dominate proof and
+/// verification latency if repeated. Compute it once per process and reuse it.
+pub fn delegation_cached_keys() -> Result<&'static DelegationKeys, ProveError> {
+    match DELEGATION_PK_CACHE.get_or_init(|| {
+        let params = delegation_params();
+        delegation_proving_key(&params)
+            .map(|(pk, vk)| (params, pk, vk))
+            .map_err(|error| error.to_string())
+    }) {
+        Ok(keys) => Ok(keys),
+        Err(error) => Err(ProveError::CachedKeygen(error.clone())),
+    }
+}
+
+/// Warm the process-lifetime delegation params/proving-key cache.
+///
+/// This lets callers pay deterministic keygen before the first user-visible
+/// proof generation or verification path needs the key. It also arms
+/// the prepared commitment tables through [`prepare_delegation_proving`]: a
+/// long-lived prover can use those tables on supported pool widths. Verifiers
+/// can use the cached-key accessor directly to avoid preparation costs.
+pub fn warm_delegation_keys() -> Result<(), ProveError> {
+    prepare_delegation_proving().map(|_| ())
+}
+
+/// Arm the prepared commitment tables over this circuit's SRS.
+///
+/// On Zakura, `Params::prepare_commitments` builds
+/// fixed-base tables that the prover's polynomial commitments then evaluate
+/// through. Key generation does not build them: it precomputes the
+/// polynomial-side data (fixed cosets, FFT twiddles, quotient plans) and
+/// stops there.
+///
+/// Call this once from a long-lived prover, off the proving critical path —
+/// [`warm_delegation_keys`] already does, so callers that warm need not call it
+/// separately. Preparation is idempotent and single-flighted; concurrent
+/// callers share one attempt. Do not fan it out across a worker pool, which
+/// would occupy the workers its own internal parallelism wants.
+///
+/// # Cost
+///
+/// Preparation retains fixed-base tables that scale with `2^K`. Measured for
+/// the `K = 12` delegation circuit (`benches/delegation.rs`): 26,426.91 KiB,
+/// against a proving key that is already 154,706 KiB. This circuit is
+/// `K = 12`.
+///
+/// # When it pays off
+///
+/// halo2 routes through the prepared tables only on pools of at most eight
+/// effective threads (ten for `K = 11` on AArch64 macOS); past that the
+/// unprepared planner out-scales them and halo2 falls back on its own. So
+/// proving gains depend on the circuit and host. Warming still pays table
+/// construction time and retains memory on wide pools and verifier-only
+/// callers, even when the large tables are not used.
+///
+/// # Returns
+///
+/// Whether the tables were actually built and cached. `false` means arming
+/// was a no-op (no prepared backend, or the backend declined) and proving
+/// simply keeps its unprepared path; it is not an error, and unlike a key
+/// generation failure it is never memoized as one. With the LRZ backend,
+/// this warms the keys and returns `Ok(false)` without building tables.
+pub fn prepare_delegation_proving() -> Result<bool, ProveError> {
+    delegation_cached_keys()
+        .map(|(params, _pk, _vk)| crate::prove_error::prepare_commitments(params))
+}
+
+// ================================================================
+// Prove
+// ================================================================
+
+/// Create a real Halo2 proof for the delegation circuit.
+///
+/// Returns the serialized proof bytes. Returns an error if the caller
+/// provides a circuit without all witnesses populated or an instance
+/// that Halo2 cannot prove against.
+///
+/// Params and keys are cached so only the first call pays keygen. Use the
+/// delegation Criterion benchmark for release-mode proving measurements.
+pub fn create_delegation_proof(
+    circuit: Circuit,
+    instance: &Instance,
+) -> Result<Vec<u8>, ProveError> {
+    let (params, pk, _vk) = delegation_cached_keys()?;
+
+    let public_inputs = instance.to_halo2_instance();
+
+    create_proof_bytes(params, pk, circuit, &public_inputs)
+}
+
+// ================================================================
+// Verify
+// ================================================================
+
+/// Verify a delegation circuit proof given serialized proof bytes and
+/// the 14 public inputs.
+///
+/// Returns `Ok(())` if verification succeeds, or an error message.
+///
+/// # Caller-authenticated inputs
+///
+/// `constrain_instance` pins each public input to whatever value the
+/// *verifier* supplies; the protocol cannot tell whether that value was
+/// the *right* one. The following fields of `instance` MUST be sourced
+/// from their category-specific authority before calling this function.
+/// Substituting them is not detectable from the proof alone.
+///
+/// ## Ledger-state anchors
+///
+/// These roots must be retrieved from the chain state at a snapshot height
+/// that the verifier independently accepts. This crate's public-input vector
+/// does not carry that height, so a chain ante handler or off-chain verifier
+/// must validate the height-to-root lookup outside this API. Do not take these
+/// values from the prover's bundle.
+///
+/// The proof does not encode a note version or pool identifier. Supplying an
+/// Orchard root can therefore admit Orchard commitments; Ironwood-only callers
+/// MUST supply the authenticated Ironwood root.
+///
+/// - `instance.nc_root` — the Ironwood note commitment tree root at the
+///   verifier-pinned snapshot height.
+/// - `instance.nf_imt_root` — the alternate-nullifier IMT root at the same
+///   snapshot height as `nc_root`.
+///
+/// ## Session parameters
+///
+/// - `instance.vote_round_id` — must come from the same governance
+///   announcement as the active voting session.
+///
+/// # Proof-attested outputs
+///
+/// The following public inputs are derived outside the circuit but
+/// constrained in-circuit against authenticated inputs and private witnesses:
+///
+/// - `instance.van_comm`
+/// - `instance.dom` — `Poseidon("governance authorization", vote_round_id)`.
+///
+/// The following fields are produced by the circuit from private
+/// witnesses; successful verification is itself their authentication and
+/// the caller does not need a separate trusted channel:
+///
+/// - `instance.nf_signed`
+/// - `instance.rk_x` / `instance.rk_y`
+/// - `instance.cmx_new`
+/// - `instance.gov_null[..]`
+pub fn verify_delegation_proof(proof: &[u8], instance: &Instance) -> Result<(), String> {
+    let (params, _pk, vk) = delegation_cached_keys().map_err(|error| error.to_string())?;
+
+    let public_inputs = instance.to_halo2_instance();
+
+    verify_proof_bytes("delegation", params, vk, proof, &public_inputs)
+}
+
+// ================================================================
+// VOUCH MODIFICATION — the exit-certificate circuit (RevealCircuit)
+// ================================================================
+
+static REVEAL_PK_CACHE: std::sync::OnceLock<Result<DelegationKeys, String>> = std::sync::OnceLock::new();
+
+/// VOUCH MODIFICATION: params and keys for [`RevealCircuit`], cached per
+/// process like the delegation keys. Same `K`, its own verifying key.
+pub fn reveal_cached_keys() -> Result<&'static DelegationKeys, ProveError> {
+    match REVEAL_PK_CACHE.get_or_init(|| {
+        let params = delegation_params();
+        let empty = RevealCircuit::default();
+        keygen_vk(&params, &empty)
+            .map_err(ProveError::KeygenVk)
+            .and_then(|vk| keygen_pk(&params, vk.clone(), &empty).map(|pk| (pk, vk)).map_err(ProveError::KeygenPk))
+            .map(|(pk, vk)| (params, pk, vk))
+            .map_err(|error| error.to_string())
+    }) {
+        Ok(keys) => Ok(keys),
+        Err(error) => Err(ProveError::CachedKeygen(error.clone())),
+    }
+}
+
+/// VOUCH MODIFICATION: prove a [`RevealCircuit`]. `instance` must carry
+/// `with_reveal`.
+pub fn create_reveal_proof(circuit: RevealCircuit, instance: &Instance) -> Result<Vec<u8>, ProveError> {
+    let (params, pk, _vk) = reveal_cached_keys()?;
+    create_proof_bytes(params, pk, circuit, &instance.to_halo2_instance())
+}
+
+/// VOUCH MODIFICATION: verify a [`RevealCircuit`] proof against its 21
+/// public inputs. The same caller-authentication rules as
+/// [`verify_delegation_proof`] apply.
+pub fn verify_reveal_proof(proof: &[u8], instance: &Instance) -> Result<(), String> {
+    let (params, _pk, vk) = reveal_cached_keys().map_err(|error| error.to_string())?;
+    verify_proof_bytes("reveal", params, vk, proof, &instance.to_halo2_instance())
+}
+
+#[cfg(test)]
+mod prove_tests {
+    use super::*;
+    use crate::delegation::builder::{build_delegation_bundle, RealNoteInput};
+    use crate::delegation::imt::{ImtProvider, SpacedLeafImtProvider};
+    use crate::ff::Field;
+    use crate::rand::rngs::OsRng;
+    use crate::ProveError;
+    use incrementalmerkletree::{Hashable, Level};
+    use voting_crypto_deps::halo2_proofs::plonk;
+    use voting_crypto_deps::orchard::{
+        keys::{FullViewingKey, Scope, SpendValidatingKey, SpendingKey},
+        note::{commitment::ExtractedNoteCommitment, nullifier::Nullifier, Note, NoteVersion, Rho},
+        tree::{MerkleHashOrchard, MerklePath},
+        value::NoteValue,
+    };
+    use voting_crypto_deps::pasta_curves::pallas;
+
+    fn minimal_instance() -> Instance {
+        let mut rng = OsRng;
+        let sk = SpendingKey::random(&mut rng);
+        let fvk: FullViewingKey = (&sk).into();
+        let ak: SpendValidatingKey = fvk.into();
+        let rk = ak.randomize(&pallas::Scalar::from(1));
+
+        Instance::from_parts(
+            Nullifier::from_inner(pallas::Base::from(1)),
+            rk,
+            pallas::Base::from(2),
+            pallas::Base::from(3),
+            pallas::Base::from(4),
+            pallas::Base::from(5),
+            pallas::Base::from(6),
+            [pallas::Base::from(7); 5],
+            pallas::Base::from(8),
+        )
+        .expect("test rk must be non-identity")
+    }
+
+    #[test]
+    fn create_delegation_proof_signature_returns_result() {
+        let _: fn(Circuit, &Instance) -> Result<Vec<u8>, ProveError> = create_delegation_proof;
+    }
+
+    #[test]
+    #[ignore = "long-running K=12 proof keygen; run when touching delegation proof creation"]
+    fn create_delegation_proof_returns_err_for_missing_witnesses() {
+        let instance = minimal_instance();
+        let err = create_delegation_proof(Circuit::default(), &instance).unwrap_err();
+
+        assert!(matches!(err, ProveError::Halo2(plonk::Error::Synthesis)));
+    }
+
+    // TODO(sean): VK-stability tripwire. Hashes the `PinnedVerificationKey`
+    // debug repr and compares against a baked-in fingerprint. A mismatch means
+    // either the circuit shape changed (and the VK must be regenerated and
+    // redistributed) or an unintended drift has been introduced.
+    #[test]
+    #[ignore = "TODO(sean): runs K=12 keygen; run with `cargo test -- --ignored vk_fingerprint_unchanged`"]
+    fn vk_fingerprint_unchanged() {
+        let (_, _, vk) = delegation_cached_keys().expect("delegation keys");
+        let pinned = format!("{:?}", vk.pinned());
+        let fingerprint = blake2b_simd::Params::new()
+            .hash_length(32)
+            .hash(pinned.as_bytes());
+        let actual: &[u8] = fingerprint.as_bytes();
+
+        let expected: [u8; 32] = [
+            0xe1, 0x77, 0x3e, 0xcd, 0x2e, 0xb8, 0x53, 0x1c, 0xc5, 0x4c, 0x1d, 0xf5, 0xb9, 0x35,
+            0xa9, 0x78, 0x78, 0x8e, 0xf4, 0xee, 0xa4, 0x94, 0x9c, 0xb4, 0x5a, 0x00, 0xed, 0xf5,
+            0x50, 0xec, 0xee, 0x81,
+        ];
+
+        assert_eq!(
+            actual,
+            expected.as_slice(),
+            "delegation VK fingerprint changed; if intentional, update `expected` to:\n{:02x?}",
+            actual,
+        );
+    }
+
+    #[test]
+    #[ignore = "long-running real proof roundtrip; run with `cargo test -- --ignored`"]
+    fn real_proof_roundtrip() {
+        let mut rng = OsRng;
+        let sk = SpendingKey::random(&mut rng);
+        let fvk: FullViewingKey = (&sk).into();
+        let output_recipient = fvk.address_at(1u32, Scope::External);
+        let vote_round_id = pallas::Base::random(&mut rng);
+        let van_comm_rand = pallas::Base::random(&mut rng);
+        let alpha = pallas::Scalar::random(&mut rng);
+
+        // Create a single real note
+        let recipient = fvk.address_at(0u32, Scope::External);
+        let (_, _, dummy) = Note::dummy(&mut rng, None, NoteVersion::V3);
+        let note = Note::new(
+            recipient,
+            NoteValue::from_raw(13_000_000),
+            Rho::from_nf_old(dummy.nullifier(&fvk)),
+            NoteVersion::V3,
+            &mut rng,
+        );
+        let cmx = ExtractedNoteCommitment::from(note.commitment());
+        let leaf = MerkleHashOrchard::from_cmx(&cmx);
+        let empty = MerkleHashOrchard::empty_leaf();
+        let mut leaves = [empty; 2];
+        leaves[0] = leaf;
+        let l1 = MerkleHashOrchard::combine(Level::from(0), &leaves[0], &leaves[1]);
+        let mut current = l1;
+        for level in 1..32u8 {
+            current = MerkleHashOrchard::combine(
+                Level::from(level),
+                &current,
+                &MerkleHashOrchard::empty_root(Level::from(level)),
+            );
+        }
+        let nc_root = current.inner();
+        let mut auth_path = [empty; 32];
+        auth_path[0] = leaves[1];
+        for level in 1..32u8 {
+            auth_path[level as usize] = MerkleHashOrchard::empty_root(Level::from(level));
+        }
+        let merkle_path = MerklePath::from_parts(0u32, auth_path);
+        let imt = SpacedLeafImtProvider::new();
+        let real_nf = note.nullifier(&fvk);
+        let imt_proof = imt.non_membership_proof(real_nf.inner()).unwrap();
+
+        let input = RealNoteInput {
+            note,
+            fvk: fvk.clone(),
+            merkle_path,
+            imt_proof,
+            scope: Scope::External,
+        };
+        let bundle = build_delegation_bundle(
+            vec![input],
+            &fvk,
+            alpha,
+            output_recipient,
+            vote_round_id,
+            nc_root,
+            van_comm_rand,
+            &imt,
+            &mut rng,
+            None,
+        )
+        .unwrap();
+
+        let proof = create_delegation_proof(bundle.circuit, &bundle.instance)
+            .expect("delegation proof creation should succeed");
+        verify_delegation_proof(&proof, &bundle.instance).expect("real proof roundtrip failed");
+        let (_, _, vk) = delegation_cached_keys().unwrap();
+        verify_proof_bytes(
+            "delegation",
+            &delegation_params(),
+            vk,
+            &proof,
+            &bundle.instance.to_halo2_instance(),
+        )
+        .expect("fresh verifier params");
+        let mut wrong_round = bundle.instance;
+        wrong_round.vote_round_id += pallas::Base::from(1);
+        assert!(verify_delegation_proof(&proof, &wrong_round).is_err());
+    }
+
+    /// VOUCH: one-note bundle worth `value` zatoshi, proving `min` ballots.
+    fn vouch_bundle(value: u64) -> crate::delegation::builder::DelegationBundle {
+        let mut rng = OsRng;
+        let sk = SpendingKey::random(&mut rng);
+        let fvk: FullViewingKey = (&sk).into();
+        let recipient = fvk.address_at(0u32, Scope::External);
+        let (_, _, dummy) = Note::dummy(&mut rng, None, NoteVersion::V3);
+        let note = Note::new(
+            recipient,
+            NoteValue::from_raw(value),
+            Rho::from_nf_old(dummy.nullifier(&fvk)),
+            NoteVersion::V3,
+            &mut rng,
+        );
+        let cmx = ExtractedNoteCommitment::from(note.commitment());
+        let leaf = MerkleHashOrchard::from_cmx(&cmx);
+        let empty = MerkleHashOrchard::empty_leaf();
+        let mut current = MerkleHashOrchard::combine(Level::from(0), &leaf, &empty);
+        let mut auth_path = [empty; 32];
+        for level in 1..32u8 {
+            auth_path[level as usize] = MerkleHashOrchard::empty_root(Level::from(level));
+            current = MerkleHashOrchard::combine(
+                Level::from(level),
+                &current,
+                &MerkleHashOrchard::empty_root(Level::from(level)),
+            );
+        }
+        let imt = SpacedLeafImtProvider::new();
+        let imt_proof = imt.non_membership_proof(note.nullifier(&fvk).inner()).unwrap();
+        build_delegation_bundle(
+            vec![RealNoteInput {
+                note,
+                fvk: fvk.clone(),
+                merkle_path: MerklePath::from_parts(0u32, auth_path),
+                imt_proof,
+                scope: Scope::External,
+            }],
+            &fvk,
+            pallas::Scalar::random(&mut rng),
+            fvk.address_at(1u32, Scope::External),
+            pallas::Base::random(&mut rng),
+            current.inner(),
+            pallas::Base::random(&mut rng),
+            &imt,
+            &mut rng,
+            None,
+        )
+        .unwrap()
+    }
+
+    /// VOUCH MODIFICATION test: the threshold public input is enforced.
+    #[test]
+    #[ignore = "real proofs; run with `cargo test --release -- --ignored vouch_threshold`"]
+    fn vouch_threshold() {
+        // 40 ballots worth (5 ZEC), plus change.
+        let b = vouch_bundle(40 * 12_500_000 + 7);
+        for (min, ok) in [(0u64, true), (1, true), (40, true), (41, false), (1_000_000, false)] {
+            let inst = b.instance.clone().with_min_ballots(min);
+            let proved = create_delegation_proof(b.circuit.clone(), &inst);
+            match (ok, proved) {
+                (true, Ok(p)) => verify_delegation_proof(&p, &inst).expect("honest threshold verifies"),
+                (false, Err(_)) => {}
+                (false, Ok(p)) => assert!(verify_delegation_proof(&p, &inst).is_err(), "min {min} must fail"),
+                (true, Err(e)) => panic!("min {min} should prove: {e}"),
+            }
+        }
+        // A proof for min 40 does not verify as a claim of 41.
+        let inst = b.instance.clone().with_min_ballots(40);
+        let p = create_delegation_proof(b.circuit.clone(), &inst).unwrap();
+        assert!(verify_delegation_proof(&p, &inst.clone().with_min_ballots(41)).is_err());
+    }
+
+    /// VOUCH MODIFICATION: the exit-certificate circuit publishes the slots' real nullifiers when
+    /// reveal = 1, forces zeros when reveal = 0, and refuses a forged nullifier or a flag that is
+    /// not a bit. Its proofs are not delegation proofs, and the other way round.
+    #[test]
+    #[ignore = "real proofs"]
+    fn vouch_reveal() {
+        let b = vouch_bundle(40 * 12_500_000);
+        let nfs = b.real_nullifiers;
+        let zeros = [pallas::Base::from(0u64); 5];
+        let with = |reveal: bool, shown: [pallas::Base; 5]| b.instance.clone().with_min_ballots(40).with_reveal(reveal, shown);
+        let refuses = |circuit: RevealCircuit, inst: &Instance, what: &str| match create_reveal_proof(circuit, inst) {
+            Err(_) => {}
+            Ok(p) => assert!(verify_reveal_proof(&p, inst).is_err(), "{what} must not verify"),
+        };
+
+        let on = with(true, nfs);
+        let p = create_reveal_proof(RevealCircuit(b.circuit.clone()), &on).unwrap();
+        verify_reveal_proof(&p, &on).expect("reveal = 1 publishes the real nullifiers");
+        let mut forged = nfs;
+        forged[0] += pallas::Base::from(1u64);
+        assert!(verify_reveal_proof(&p, &with(true, forged)).is_err(), "a forged revealed nullifier");
+        assert!(verify_delegation_proof(&p, &b.instance.clone().with_min_ballots(40)).is_err(), "not a delegation proof");
+
+        let off = with(false, zeros);
+        let q = create_reveal_proof(RevealCircuit(b.circuit.clone()), &off).unwrap();
+        verify_reveal_proof(&q, &off).expect("reveal = 0 publishes zeros");
+        assert!(verify_reveal_proof(&q, &with(false, nfs)).is_err(), "reveal = 0 with nullifiers");
+        refuses(RevealCircuit(b.circuit.clone()), &with(false, nfs), "reveal = 0 claiming nullifiers");
+
+        let mut two = off.clone();
+        two.reveal = Some((pallas::Base::from(2u64), nfs.map(|n| n + n)));
+        refuses(RevealCircuit(b.circuit.clone()), &two, "a reveal flag of 2");
+
+        let d = create_delegation_proof(b.circuit.clone(), &b.instance.clone().with_min_ballots(40)).unwrap();
+        assert!(verify_reveal_proof(&d, &on).is_err(), "a delegation proof is not a reveal proof");
+    }
+
+    #[test]
+    fn prepare_delegation_proving_signature_returns_result() {
+        let _: fn() -> Result<bool, ProveError> = prepare_delegation_proving;
+    }
+
+    // Exercise the warm entry point first, then repeat preparation and prove
+    // within the same narrow pool. LRZ must retain ordinary proving behavior.
+    #[test]
+    #[ignore = "real proof with prepared commitments; also exercised in CI"]
+    fn prepared_proving_roundtrip() {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(6)
+            .build()
+            .unwrap()
+            .install(|| {
+                warm_delegation_keys().expect("warm keys");
+                let first = prepare_delegation_proving().expect("prepare keys");
+                assert_eq!(first, !cfg!(feature = "lrz"));
+                assert_eq!(
+                    prepare_delegation_proving().expect("repeat preparation"),
+                    first
+                );
+                real_proof_roundtrip();
+            });
+    }
+}

@@ -1,0 +1,504 @@
+@import 'tailwindcss';
+
+/* ── tokens ─────────────────────────────────────────────────────────────── */
+
+@theme {
+  /* No default palette. If a colour is not listed here it does not exist. */
+  --color-*: initial;
+
+  /* document — the body surface */
+  --color-bone: #f3f1ea;
+  --color-bone-2: #e9e6dc;
+  --color-ink: #1a1d1b;
+  --color-ink-2: #5c615d;
+  --color-ink-3: #696e69; /* 4.6:1 on bone: the lightest grey small text may use (WCAG AA) */
+  --color-rule: #dedacf;
+  --color-border: #c9c4b6;
+
+  /* shielded — hero, ticker, footer, redaction bars */
+  --color-shielded: #0b0d0c;
+  --color-shielded-2: #141715;
+  --color-on-dark: #edeae1;
+  --color-on-dark-2: #7e847e;
+  --color-rule-dark: #222622;
+
+  /* the seal — the only saturated colour at rest */
+  --color-seal: #c8452f;
+  /* the seal as small text on the shielded ground, lifted to 4.8:1 (AA) */
+  --color-seal-on-dark: #d6533b;
+  --color-seal-bg: #f7e9e5;
+
+  /* verdicts — only inside a <Verdict> or a status chip */
+  --color-valid: #2e6a4e;
+  --color-valid-bg: #e7f0ea;
+  --color-invalid: #9e2b20;
+  --color-invalid-bg: #f6e6e3;
+  --color-expired: #8a6a1f;
+  --color-expired-bg: #f7f0df;
+
+  --radius-*: initial;
+  --radius-panel: 12px;
+  --radius-chip: 4px;
+
+  --shadow-*: initial;
+  --shadow-lift: 0 1px 2px rgba(26, 29, 27, 0.05);
+
+  --breakpoint-*: initial;
+  --breakpoint-sm: 390px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+}
+
+@theme inline {
+  --font-serif: var(--font-instrument), 'Times New Roman', serif;
+  --font-sans: var(--font-switzer), 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-display: var(--font-fraunces), var(--font-instrument), 'Times New Roman', serif;
+  --font-pixel: var(--font-geist-pixel-square), var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: light;
+  --gutter: clamp(20px, 3.6vw, 76px);
+  --maxw: 1760px;
+  /* section anatomy (§4.3). Top and end together make one rhythm between sections: about
+     clamp(96px, 14vh, 168px) from one section's last line to the next section's first */
+  --s-top: clamp(48px, 7vh, 84px);
+  --s-eyebrow: clamp(28px, 3.06vw, 44px);
+  --s-content: clamp(56px, 7vh, 96px);
+  --s-end: clamp(48px, 7vh, 84px);
+}
+
+/* ── base ───────────────────────────────────────────────────────────────── */
+
+html {
+  background: var(--color-bone);
+  color: var(--color-ink);
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--color-bone);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-x: clip;
+  font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3, h4 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+::selection { background: var(--color-ink); color: var(--color-bone); }
+
+:focus-visible {
+  outline: 2px solid var(--color-seal);
+  outline-offset: 3px;
+  /* the ring draws in: it closes onto the control from a few px out (§6.2) */
+  animation: focus-draw 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes focus-draw {
+  from { outline-offset: 9px; outline-color: transparent; }
+}
+
+/* lenis */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* ── layout ─────────────────────────────────────────────────────────────── */
+
+.wrap {
+  width: 100%;
+  max-width: calc(var(--maxw) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.section { padding-top: var(--s-top); padding-bottom: var(--s-end); }
+.section-head > * + * { margin-top: var(--s-eyebrow); }
+.section-body { margin-top: var(--s-content); }
+
+/* ── type (§4.2) ────────────────────────────────────────────────────────── */
+
+.t-display-xl, .t-display-l, .t-display-m, .t-numeral {
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+.t-display-xl { font-size: clamp(44px, 6.4vw, 118px); line-height: 0.98; letter-spacing: -0.02em; }
+/* the hero headline only: Fraunces, light, optical size wound all the way up */
+.t-hero {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-variation-settings: 'opsz' 144, 'SOFT' 0, 'WONK' 1;
+  letter-spacing: -0.032em;
+  line-height: 0.95;
+}
+.t-display-l  { font-size: clamp(34px, 4.8vw, 84px);  line-height: 1.06; letter-spacing: -0.018em; }
+.t-display-m  { font-size: clamp(24px, 2.6vw, 44px);  line-height: 1.14; letter-spacing: -0.01em; }
+.t-numeral    { font-size: clamp(40px, 4.6vw, 88px);  line-height: 1;    letter-spacing: -0.02em; font-variant-numeric: tabular-nums lining-nums; }
+
+/* below 1024 the display tokens drop one step */
+@media (max-width: 1023.98px) {
+  .t-display-xl { font-size: clamp(40px, 4.8vw + 22px, 64px); line-height: 1.02; letter-spacing: -0.018em; }
+  .t-display-l  { font-size: clamp(28px, 2.6vw + 18px, 44px); line-height: 1.1;  letter-spacing: -0.01em; }
+  .t-display-m  { font-size: clamp(22px, 1vw + 18px, 28px);   line-height: 1.18; }
+}
+
+.t-title { font-size: clamp(17px, 1.2vw, 21px); font-weight: 600; line-height: 1.35; letter-spacing: -0.01em; }
+.t-prose { font-size: clamp(16px, 1.1vw, 19px); line-height: 1.66; max-width: 64ch; }
+.t-body  { font-size: 16px; line-height: 1.55; }
+.t-small { font-size: 14px; line-height: 1.5; }
+
+.t-eyebrow, .t-data, .t-data-sm { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* eyebrows set in Geist Pixel */
+.t-eyebrow { font-family: var(--font-pixel); font-size: 12px; font-weight: 500; line-height: 1.2; letter-spacing: 0.14em; text-transform: uppercase; }
+.t-pixel { font-family: var(--font-pixel); font-weight: 500; }
+
+/* the phrase a serif headline turns on */
+.accent { font-style: italic; letter-spacing: -0.01em; }
+.t-data    { font-size: 13px; line-height: 1.5; }
+.t-data-sm { font-size: 11px; line-height: 1.45; letter-spacing: 0.02em; }
+
+.wordmark {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-right: -0.16em; /* tracking trails the last letter; keep optical centring honest */
+  line-height: 1;
+}
+
+/* ── motion pre-states — only ever under .js-ready (§14) ────────────────── */
+
+/* A bar that will reveal. Without JS or with reduced motion it is already open. */
+[data-reveal] { transform: scaleX(0); }
+.js-ready [data-reveal] { transform: scaleX(1); }
+@media (max-width: 1023.98px) {
+  .js-ready [data-reveal] { transform: scaleX(0); } /* instant on small screens */
+}
+
+.js-ready [data-line-reveal] { visibility: hidden; }
+.js-ready [data-enter] { opacity: 0; }
+.js-ready [data-clip-enter] { clip-path: inset(0 0 100% 0); }
+.js-ready [data-rule] { transform: scaleX(0); transform-origin: left center; }
+
+/* a framed painting is uncovered from the bottom edge up while the image itself eases down
+   out of a slight zoom; a feather-edged plate (no frame to clip against) simply rises and settles */
+.js-ready [data-unveil] { clip-path: inset(100% 0 0 0); }
+
+/* the lender's desk inside its dark panel: a long, soft dissolve into the panel — on small screens
+   downward into the text, on large screens leftward behind the words */
+.plate-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 45%, rgb(0 0 0 / 0.5) 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 45%, rgb(0 0 0 / 0.5) 78%, transparent 100%);
+}
+@media (min-width: 1024px) {
+  .plate-fade {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 0.18) 20%, rgb(0 0 0 / 0.72) 40%, #000 58%);
+    mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 0.18) 20%, rgb(0 0 0 / 0.72) 40%, #000 58%);
+  }
+}
+
+/* a picture frame: the panel, and a hairline mat a few pixels outside it */
+.framed { outline: 1px solid var(--color-border); outline-offset: 7px; }
+@media (max-width: 1023.98px) {
+  .js-ready [data-clip-enter] { clip-path: none; }
+}
+
+/* the iris stage fills the viewport while it is pinned, so nothing of the next section shows under it */
+.js-ready [data-iris-stage] { min-height: 100vh; min-height: 100svh; }
+
+/* ── the redaction read (§5.4): the base state is the finished one ─────────── */
+
+.rr-text {
+  /* while it runs the sentence is the whole screen: display size, short lines, and never taller
+     than the viewport */
+  max-width: 20ch;
+  font-family: var(--font-serif);
+  font-size: clamp(40px, min(5.2vw, 8.2vh), 84px);
+  line-height: 1.08;
+  letter-spacing: -0.018em;
+  color: var(--color-ink);
+}
+[data-redaction-read] { position: relative; }
+/* the dark that closes the section like a curtain, over the sentence: a full viewport centred on the
+   stage, clipped to nothing until it sweeps */
+.rr-wipe {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  width: 100vw;
+  height: 100vh;
+  height: 100lvh;
+  translate: -50% -50%;
+  background: var(--color-shielded);
+  visibility: hidden;
+  pointer-events: none;
+}
+.rr-w { position: relative; display: inline-block; }
+.rr-bar {
+  position: absolute;
+  inset: 0.16em -0.05em 0.04em;
+  background: var(--color-ink);
+  /* lifts toward the end of the word, so the text appears in reading order */
+  transform-origin: 100% 50%;
+  transform: scaleX(0);
+}
+/* withheld for good: the bar is simply there, and nothing is underneath it */
+.rr-w[data-rw='never'] .rr-bar { transform: none; }
+.rr-w[data-rw='never'] .rr-t { visibility: hidden; }
+.rr-fact { position: relative; display: inline-block; white-space: nowrap; }
+.rr-w[data-rw='fact'] .rr-t { color: var(--color-seal); }
+.rr-u { position: absolute; left: 0; right: 0; bottom: 0.02em; height: 2px; background: var(--color-seal); transform-origin: 0 50%; }
+.rr-readout { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 32px; color: var(--color-ink-3); text-transform: uppercase; letter-spacing: 0.12em; }
+.rr-readout b { font-weight: 500; color: var(--color-ink); }
+
+/* ── redaction ──────────────────────────────────────────────────────────── */
+
+.redact { position: relative; display: inline-block; }
+.redact-bar {
+  position: absolute;
+  inset: 0.12em -0.05em 0.06em;
+  background: var(--redact, var(--color-ink));
+  transform-origin: right center;
+  pointer-events: none;
+  border-radius: 0;
+}
+.redact-bar.is-block { inset: 0; }
+
+/* ── controls ───────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 50px;
+  padding-inline: 26px;
+  border-radius: var(--radius-chip);
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.22s cubic-bezier(0.215, 0.61, 0.355, 1), border-color 0.22s cubic-bezier(0.215, 0.61, 0.355, 1), color 0.22s;
+  user-select: none;
+}
+.btn-sm { height: 38px; padding-inline: 16px; font-size: 14px; }
+.btn-primary { background: var(--color-ink); color: var(--color-bone); --btn-hot-bg: var(--color-bone); --btn-hot-fg: var(--color-ink); }
+.btn-secondary { border: 1px solid var(--color-border); color: var(--color-ink); }
+.btn-secondary:hover { border-color: var(--color-ink); background: var(--color-bone-2); }
+.btn-on-dark { background: var(--color-on-dark); color: var(--color-shielded); --btn-hot-bg: var(--color-shielded); --btn-hot-fg: var(--color-on-dark); }
+.btn-ghost-dark { border: 1px solid var(--color-rule-dark); color: var(--color-on-dark); }
+.btn-ghost-dark:hover { border-color: var(--color-on-dark-2); }
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+/* without the button behaviour (no JS, reduced motion), the old quiet hover */
+html:not(.js-ready) .btn-primary:hover { background: #2a2e2b; }
+
+/* ── the button family (§6.2): markup from <BtnLabel>, behaviour from lib/buttons.ts ── */
+
+.btn { position: relative; isolation: isolate; }
+
+/* primary: the hover fill, a disc grown from the pointer's entry point (--fx/--fy/--fr, set by JS).
+   Inset 1px so a hairline of the resting colour stays as the edge once it has flooded. */
+.btn-primary::before, .btn-on-dark::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  border-radius: calc(var(--radius-chip) - 1px);
+  background: var(--btn-hot-bg);
+  clip-path: circle(var(--fr, 0px) at var(--fx, 50%) var(--fy, 50%));
+  pointer-events: none;
+}
+
+/* the label: every character over a copy of itself in the hover colour; JS rolls them up */
+.btn-label { position: relative; display: inline-block; }
+.btn-roll { display: inline-flex; overflow: hidden; line-height: 1.3; }
+.btn-c { position: relative; display: inline-block; white-space: pre; }
+.btn-c::after { content: attr(data-c); position: absolute; left: 0; top: 100%; color: var(--btn-hot-fg, currentColor); }
+
+/* primary only: a leading dot that becomes an arrow */
+.btn-icon { display: none; flex: none; overflow: visible; transition: color 0.2s; }
+.btn-primary .btn-icon, .btn-on-dark .btn-icon { display: block; }
+.btn.is-hot .btn-icon { color: var(--btn-hot-fg); }
+.btn-arrow { stroke-dasharray: 1; stroke-dashoffset: 1; }
+
+/* secondary: an underline drawn in from the left, and retracted to the right.
+   The position flips only while the line is either empty or full, so the flip never shows. */
+@media (hover: hover) {
+  .btn-secondary .btn-label, .btn-ghost-dark .btn-label {
+    padding-bottom: 1px;
+    background: linear-gradient(currentColor, currentColor) no-repeat 100% 100% / 0% 1px;
+    transition: background-size 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-secondary:hover .btn-label, .btn-ghost-dark:hover .btn-label { background-size: 100% 1px; background-position: 0 100%; }
+}
+
+/* loading: the ring that draws inside the closed-down button */
+.btn-spin { position: absolute; top: 0; left: 50%; height: 100%; width: auto; translate: -50% 0; opacity: 0; pointer-events: none; overflow: visible; }
+
+/* disabled is honest: no fill, no roll, no hover. A busy button is disabled but not faded. */
+.btn:disabled::before { visibility: hidden; }
+.btn:disabled .btn-c { transform: none !important; }
+.btn[aria-busy='true'] { opacity: 1; }
+
+.link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 0.22s cubic-bezier(0.215, 0.61, 0.355, 1), color 0.22s;
+}
+.link-draw:hover, .link-draw[aria-current='page'] { background-size: 100% 1px; }
+/* in the header the sliding dot marks the current route instead */
+header .link-draw[aria-current='page']:not(:hover) { background-size: 0% 1px; }
+/* in from the left, out to the right (§6.2): the anchor flips only while the line is full or empty */
+.link-draw { background-position: 100% 100%; }
+.link-draw:hover { background-position: 0 100%; }
+
+.field {
+  width: 100%;
+  height: 46px;
+  padding-inline: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-chip);
+  background: var(--color-bone);
+  color: var(--color-ink);
+  font-size: 15px;
+  transition: border-color 0.22s;
+}
+.field:hover { border-color: var(--color-ink-3); }
+.field:focus { border-color: var(--color-ink); outline: none; }
+.field:focus-visible { outline: 2px solid var(--color-seal); outline-offset: 3px; }
+.field::placeholder { color: var(--color-ink-3); }
+textarea.field { height: auto; padding-block: 12px; resize: vertical; }
+
+/* the header's logo crossfades with the header when the ground changes (the mark colours itself inline) */
+.nav-mark svg, .nav-mark .wordmark { transition: color 0.3s; }
+
+/* ── choices, fields and dropzones (§6.4) ─────────────────────────────── */
+
+/* a chip, card or segment that can be chosen: the selection fills from the centre, and empties back */
+.pick { position: relative; isolation: isolate; }
+.pick::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pick-fill, var(--color-bone-2));
+  transform: scale(0);
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
+  pointer-events: none;
+}
+.pick[aria-pressed='true']::before, .pick[data-on='true']::before { transform: none; opacity: 1; }
+/* segmented controls fill with ink, and their label turns over with it */
+.pick-ink { --pick-fill: var(--color-ink); transition: color 0.2s 0.06s; }
+/* a check that draws on when chosen and undraws when not */
+.pick-check path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+[data-on='true'] > .pick-check path, [data-on='true'] .pick-check path { stroke-dashoffset: 0; transition-delay: 0.08s; }
+.hash-check path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+.hash-check.is-on path { stroke-dashoffset: 0; }
+
+/* a field that refuses its input says so in the invalid colour (lib/forms.ts nudges it, once) */
+.field[aria-invalid='true'] { border-color: var(--color-invalid); }
+
+/* a dropzone lifts and its border marches while a file is over it */
+[data-dropzone] { position: relative; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s, border-color 0.2s; }
+[data-dropzone][data-dragging='true'] { transform: translateY(-2px); border-color: transparent; }
+.drop-march { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; opacity: 0; transition: opacity 0.2s; pointer-events: none; color: var(--color-ink); }
+[data-dropzone][data-dragging='true'] .drop-march { opacity: 1; }
+[data-dropzone][data-dragging='true'] .drop-march rect { animation: march 0.6s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -12; } }
+/* the dropped file's name, flying from the drop point to where it lands */
+.drop-token {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 70;
+  padding: 4px 10px;
+  border: 1px solid var(--color-ink);
+  border-radius: var(--radius-chip);
+  background: var(--color-bone);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ── custom cursor ──────────────────────────────────────────────────────── */
+
+/* the system cursor stays; the dot rides with it. The dot and the ring invert whatever is under
+   them (paper colour, difference blend): dark on paper, light on the dark bands, visible on any
+   painting. Never blended over the seal, where difference turns red cyan: there it is plain ink. */
+.cursor-dot { background: var(--color-bone); mix-blend-mode: difference; }
+.cursor-dot[data-state='seal'] { background: var(--color-ink); mix-blend-mode: normal; }
+.cursor-ring { border: 1px solid var(--color-bone); color: var(--color-bone); mix-blend-mode: difference; }
+
+/* the aperture lens: a painting is veiled very slightly everywhere except under the ring.
+   --lx/--ly follow the cursor; --lens-r is set from CURSOR.ring by the element. */
+.lens-veil {
+  position: absolute;
+  inset: 0;
+  background: rgb(11 13 12 / 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  -webkit-mask-image: radial-gradient(circle var(--lens-r, 36px) at var(--lx, 50%) var(--ly, 50%), transparent 96%, #000 100%);
+  mask-image: radial-gradient(circle var(--lens-r, 36px) at var(--lx, 50%) var(--ly, 50%), transparent 96%, #000 100%);
+}
+.is-lens .lens-veil { opacity: 1; }
+
+/* ── preloader — first landing load per session, desktop only; decided before paint */
+
+.preloader { display: none; }
+html.preload .preloader { display: flex; }
+html.preload body { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ── footer wordmark ───────────────────────────────────────────────────── */
+
+.footer-word { --mx: 50%; --my: 50%; --lit: 0; }
+.footer-word-base,
+.footer-word-lit {
+  grid-area: 1 / 1;
+  font-family: var(--font-serif);
+  /* sized so "Vouch." spans the grid edge to edge */
+  font-size: min(44.5vw, 840px);
+  line-height: 0.8;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  /* the name runs off the bottom edge of the page */
+  margin-bottom: -0.05em;
+}
+.footer-word-base { color: var(--color-rule-dark); }
+.footer-word-lit {
+  color: transparent;
+  background: radial-gradient(circle 22vw at var(--mx) var(--my), var(--color-on-dark) 0%, rgb(237 234 225 / 0.35) 38%, transparent 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  opacity: var(--lit);
+  transition: opacity 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
+  pointer-events: none;
+}
+@media (hover: none) {
+  /* no pointer to follow: a fixed, dimmer glow on the first letters */
+  .footer-word { --mx: 18%; --my: 40%; --lit: 0.55; }
+}

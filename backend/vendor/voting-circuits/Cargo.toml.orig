@@ -1,0 +1,68 @@
+[package]
+name = "voting-circuits"
+version = "0.12.1"
+edition = "2021"
+rust-version = "1.86.0"
+description = "Governance ZKP circuits (delegation, vote proof, share reveal) for the Zcash shielded-voting protocol."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/valargroup/voting-circuits"
+readme = "README.md"
+
+[dependencies]
+# Keep this exact so a published release cannot resolve a different circuit dependency graph.
+voting-crypto-deps = { path = "voting-crypto-deps", version = "=0.2.3", default-features = false }
+blake2b_simd = "1"
+# incrementalmerkletree is the Orchard Merkle API line mirrored by delegation witness construction.
+incrementalmerkletree = "0.8.1"
+lazy_static = "1"
+# zip_eq makes length-pairing fail loudly if fixed-size share arrays are ever generalized.
+itertools = "0.14.0"
+# Reference IMT implementation used by the opt-in integration tests to
+# cross-check the in-tree provider. It is optional so selecting the Zakura
+# backend does not activate an upstream cryptography family through test-only
+# code while imt-tree's own backend migration is developed independently.
+imt-tree = { version = "=0.2.0", optional = true }
+
+[dev-dependencies]
+criterion = "0.8"
+incrementalmerkletree = "0.8.1"
+# Benches only: lets `benches/delegation.rs` drive the prover from a
+# deterministic RNG, so prepared and unprepared proving can be compared
+# byte for byte.
+rand_core = { version = "0.10", default-features = false }
+# Force prepared-path tests into a narrow pool, independently of host defaults.
+rayon = "1"
+
+[lints.clippy]
+# Halo2 circuit helpers naturally take many `AssignedCell` parameters and
+# return nested tuples of them.
+too_many_arguments = "allow"
+type_complexity = "allow"
+# Fixed-depth range loops (`for i in 0..DEPTH`) over witness arrays are
+# clearer than `.iter().enumerate()` chains in circuit synthesis code.
+needless_range_loop = "allow"
+
+[features]
+# Use Zakura's cryptography family by default.
+default = ["voting-crypto-deps/default"]
+# Use the crates.io librustzcash cryptography family.
+lrz = ["voting-crypto-deps/lrz"]
+# Re-exports `delegation::build_nullifier_list`, used by the in-tree IMT
+# integration test. Not part of the stable public API; downstream consumers
+# should not enable this.
+unstable-internal-api = ["dep:imt-tree"]
+
+[lib]
+bench = false
+
+[[bench]]
+name = "delegation"
+harness = false
+
+[[test]]
+name = "imt_circuit_integration"
+required-features = ["unstable-internal-api"]
+
+[workspace]
+resolver = "2"
+members = ["voting-crypto-deps"]

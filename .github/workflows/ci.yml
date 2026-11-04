@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    shell: bash # -eo pipefail, unlike the implicit default
+
+jobs:
+  rust:
+    name: Rust · clippy, tests, real proofs, WASM parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain, targets and components from backend/rust-toolchain.toml
+        working-directory: backend
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - name: Clippy (Vouch crates, warnings are errors)
+        working-directory: backend
+        run: cargo clippy --locked -p pof-core -p pof-zk -p pof-verify -p pof-prove -p pof-anchor -p pof-attest -p pof-wasm --all-targets --all-features -- -D warnings -A clippy::implied_bounds_in_impls
+      - name: Invariant — pof-core, pof-verify and pof-zk link no network client
+        working-directory: backend
+        run: |
+          for c in pof-core pof-verify pof-zk; do
+            tree=$(cargo tree --locked -p $c --no-default-features -e normal --prefix none)
+            if grep -Eq '^(reqwest|hyper|tonic) ' <<<"$tree"; then echo "$c links a network client"; exit 1; fi
+          done
+      - name: Unit and integration tests
+        working-directory: backend
+        run: cargo test --locked --release --workspace
+      - name: Real proofs (threshold circuit, tampering, wallet path)
+        working-directory: backend
+        run: |
+          cargo test --locked --release -p voting-circuits --lib vouch_threshold -- --ignored
+          cargo test --locked --release -p pof-zk --features prove --test roundtrip -- --ignored
+          cargo test --locked --release -p pof-prove --test wallet -- --ignored
+      # Not diffed against the committed build: rustc embeds host paths (the cargo registry, `\` vs `/`),
+      # so a Linux rebuild never matches a Windows one byte for byte. The web job checks the committed build.
+      - name: Build the WASM verifier from source
+        run: |
+          cargo install wasm-bindgen-cli --version 0.2.128 --locked
+          ./scripts/build-wasm.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Freshly built WASM ≡ native on every fixture
+        run: node --no-warnings scripts/verify-fixtures-wasm.mjs
+
+  solana:
+    name: Solana · build programs, LiteSVM attack tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      # rustup finds backend/rust-toolchain.toml from backend/solana too: the host LiteSVM tests use that rustc
+      - name: Toolchain from backend/rust-toolchain.toml
+        working-directory: backend
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend/solana
+      - name: Solana CLI 4.1.2 and OpenSSL (LiteSVM precompiles)
+        run: |
+          sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config
+          sh -c "$(curl -sSfL https://release.anza.xyz/v4.1.2/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+      - name: Build pof-gate, pof-credit and pof-reserve (SBF)
+        working-directory: backend/solana
+        run: |
+          cargo build-sbf --manifest-path programs/pof-gate/Cargo.toml --sbf-out-dir target/deploy -- --locked
+          cargo build-sbf --manifest-path programs/pof-credit/Cargo.toml --sbf-out-dir target/deploy -- --locked
+          cargo build-sbf --manifest-path programs/pof-reserve/Cargo.toml --sbf-out-dir target/deploy -- --locked
+      - name: Attack tests
+        working-directory: backend/solana
+        run: cargo test --locked -p pof-solana-tests
+
+  web:
+    name: Web · typecheck, codec and WASM parity, fixture sync, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - name: TypeScript codec ≡ Rust encoder on every committed proof
+        run: pnpm test:fixtures
+      - name: Committed WASM (what the site serves) ≡ native on every fixture
+        run: pnpm test:wasm
+      - name: Site copies of fixtures match fixtures/ (run scripts/sync-fixtures.sh)
+        run: |
+          ../scripts/sync-fixtures.sh
+          synced="public/proofs src/data/anchors.json src/data/revocations.demo.json"
+          drift=$(git status --porcelain --untracked-files=all -- $synced)
+          if [ -n "$drift" ]; then echo "$drift"; git diff --stat -- $synced; exit 1; fi
+      - run: pnpm build

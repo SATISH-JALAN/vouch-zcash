@@ -1,0 +1,22 @@
+{
+  "about": "Deposits to match exit.pof against (pof-verify match --cert proofs/exit.pof --deposit <one of these>). Demo ledger: no real transactions.",
+  "audience": "rail:demo",
+  "certificate": "exit.pof",
+  "deposits": {
+    "matched": {
+      "nullifiers": [
+        "6396d84ada25e4763f41257acb19c2f9c63fc2a8a3ba5cc22556d4abc8448729"
+      ],
+      "txid": "demo-tx-1"
+    },
+    "mismatch": {
+      "nullifiers": [
+        "6396d84ada25e4763f41257acb19c2f9c63fc2a8a3ba5cc22556d4abc8448729",
+        "8acd5d12ec052002f9bbe7becf684c704c9a661b340ecbfaa6e81fe58dcb8c26"
+      ],
+      "txid": "demo-tx-2"
+    }
+  },
+  "epoch": 202610,
+  "intent": "demo-deposit-1"
+}

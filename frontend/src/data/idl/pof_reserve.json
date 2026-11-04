@@ -1,0 +1,692 @@
+{
+  "address": "5Q26Tjcd4equ5te5hF15eG4xK6uvkbZtKkEeqdf535h9",
+  "metadata": {
+    "name": "pof_reserve",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "init_feed",
+      "docs": [
+        "A feed for one verifier identifier (its audience hash), with its own demo token that only",
+        "`issuer` may mint. Admin only."
+      ],
+      "discriminator": [
+        203,
+        50,
+        143,
+        146,
+        170,
+        34,
+        46,
+        93
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "feed",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  100
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "audience"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "feed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "audience",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "heartbeat_slots",
+          "type": "u64"
+        },
+        {
+          "name": "issuer",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must be the program's upgrade authority: otherwise anyone could create the config first."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "program",
+          "address": "5Q26Tjcd4equ5te5hF15eG4xK6uvkbZtKkEeqdf535h9"
+        },
+        {
+          "name": "program_data"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "attestors",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "threshold",
+          "type": "u8"
+        },
+        {
+          "name": "max_age_slots",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "publish",
+      "docs": [
+        "Write a signed batch verdict to the feed. Anyone may submit it; only the allowlisted",
+        "attestors' signatures make it count. A feed never goes back to an older anchor."
+      ],
+      "discriminator": [
+        129,
+        177,
+        182,
+        160,
+        184,
+        224,
+        219,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "feed",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "feed.audience",
+                "account": "Feed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "instructions",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "message",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "secure_mint",
+      "docs": [
+        "Secure Mint: the feed's token mints only while the feed is fresh and the supply stays",
+        "within the proven reserves. The issuer signs."
+      ],
+      "discriminator": [
+        19,
+        109,
+        39,
+        212,
+        254,
+        113,
+        29,
+        181
+      ],
+      "accounts": [
+        {
+          "name": "feed",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "feed.audience",
+                "account": "Feed"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "relations": [
+            "feed"
+          ]
+        },
+        {
+          "name": "to",
+          "writable": true
+        },
+        {
+          "name": "issuer",
+          "signer": true,
+          "relations": [
+            "feed"
+          ]
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_attestors",
+      "discriminator": [
+        93,
+        63,
+        17,
+        49,
+        223,
+        88,
+        178,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "attestors",
+          "type": {
+            "vec": "pubkey"
+          }
+        },
+        {
+          "name": "threshold",
+          "type": "u8"
+        },
+        {
+          "name": "max_age_slots",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "Feed",
+      "discriminator": [
+        69,
+        191,
+        16,
+        227,
+        132,
+        187,
+        84,
+        227
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "FeedUpdated",
+      "discriminator": [
+        200,
+        60,
+        190,
+        86,
+        247,
+        9,
+        50,
+        81
+      ]
+    },
+    {
+      "name": "SecureMinted",
+      "discriminator": [
+        107,
+        236,
+        117,
+        226,
+        184,
+        91,
+        198,
+        213
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "BadLength",
+      "msg": "a reserve message is 112 bytes"
+    },
+    {
+      "code": 6001,
+      "name": "BadDomain",
+      "msg": "message is not domain-separated as POF-RESERVE-v1"
+    },
+    {
+      "code": 6002,
+      "name": "BadExpiry",
+      "msg": "expiry out of range"
+    },
+    {
+      "code": 6003,
+      "name": "BadMessage",
+      "msg": "malformed reserve message"
+    },
+    {
+      "code": 6004,
+      "name": "BadEd25519",
+      "msg": "malformed Ed25519 instruction"
+    },
+    {
+      "code": 6005,
+      "name": "ForeignOffsets",
+      "msg": "an Ed25519 signature entry points outside its own instruction"
+    },
+    {
+      "code": 6006,
+      "name": "NotEnoughSignatures",
+      "msg": "not enough allowlisted attestors signed this exact message"
+    },
+    {
+      "code": 6007,
+      "name": "Stale",
+      "msg": "the attestation is older than max_age_slots, or from the future"
+    },
+    {
+      "code": 6008,
+      "name": "Expired",
+      "msg": "the proofs behind these reserves have expired"
+    },
+    {
+      "code": 6009,
+      "name": "WrongAudience",
+      "msg": "the reserves were proven to another verifier than this feed"
+    },
+    {
+      "code": 6010,
+      "name": "OlderAnchor",
+      "msg": "a feed never goes back to an older anchor"
+    },
+    {
+      "code": 6011,
+      "name": "NeverPublished",
+      "msg": "the feed has never been published"
+    },
+    {
+      "code": 6012,
+      "name": "StaleFeed",
+      "msg": "the feed is stale: no publish within its heartbeat"
+    },
+    {
+      "code": 6013,
+      "name": "OverReserves",
+      "msg": "minting this would exceed the proven reserves"
+    },
+    {
+      "code": 6014,
+      "name": "BadHeartbeat",
+      "msg": "heartbeat must be at least one slot"
+    },
+    {
+      "code": 6015,
+      "name": "BadAttestorSet",
+      "msg": "attestor set must be 1–8 distinct keys with 1 ≤ threshold ≤ count"
+    },
+    {
+      "code": 6016,
+      "name": "NotUpgradeAuthority",
+      "msg": "only the program's upgrade authority can initialize it"
+    }
+  ],
+  "types": [
+    {
+      "name": "Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "attestors",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "threshold",
+            "type": "u8"
+          },
+          {
+            "name": "max_age_slots",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Feed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "audience",
+            "docs": [
+              "blake2b of the verifier identifier the reserves were proven to."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "issuer",
+            "docs": [
+              "Who may mint the feed's token."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "heartbeat_slots",
+            "type": "u64"
+          },
+          {
+            "name": "scope",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "total_zatoshi",
+            "type": "u64"
+          },
+          {
+            "name": "members",
+            "type": "u16"
+          },
+          {
+            "name": "anchor_height",
+            "type": "u32"
+          },
+          {
+            "name": "nc_height",
+            "type": "u32"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          },
+          {
+            "name": "updated_slot",
+            "type": "u64"
+          },
+          {
+            "name": "publishes",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeedUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "audience",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "total_zatoshi",
+            "type": "u64"
+          },
+          {
+            "name": "anchor_height",
+            "type": "u32"
+          },
+          {
+            "name": "signers",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SecureMinted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "audience",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "supply",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+# Render blueprint for the attestor (pof-attest) on the free plan. In Render: New → Blueprint →
+# this repo. Render asks for the values marked `sync: false`; never commit them.
+#   POF_ATTEST_KEY   the attestor's Ed25519 seed (backend/solana/keys/attestor-devnet.hex): the
+#                    devnet programs allowlist its public key, 7vo5Vjjwh3T4dcFBNhGVDJVFYmd9tvV3hnYX5pS5ztYQ
+# The free instance sleeps after 15 minutes without traffic; .github/workflows/keepalive.yml pings
+# /health every 10 minutes (set the repository variable ATTESTOR_URL to this service's URL).
+services:
+  - type: web
+    name: vouch-attest
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: POF_ATTEST_KEY
+        sync: false
+      - key: SOLANA_RPC_URL
+        value: https://api.devnet.solana.com
+      - key: POF_REVOCATIONS_URL
+        value: https://vouch-zcash.vercel.app/api/revocations

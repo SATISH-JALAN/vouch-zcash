@@ -1,0 +1,27 @@
+[package]
+name = "pof-zk"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Vouch: drives the (modified) delegation circuit to prove and verify threshold holdings."
+
+[features]
+# Proving pulls in the proving key and randomness; verifiers (and the WASM build) leave it off.
+prove = ["voting-crypto-deps/multicore", "voting-circuits/default", "parallel"]
+# Parallel tree hashing for native builds (the WASM verifier never builds trees).
+parallel = ["dep:rayon"]
+# Batch verification of many proofs with one multi-scalar multiplication (native: it needs a
+# system RNG). Off in WASM, which checks a batch one proof at a time.
+batch = ["dep:zakura-halo2-proofs"]
+
+[dependencies]
+pof-core = { path = "../pof-core" }
+voting-circuits = { path = "../../vendor/voting-circuits", default-features = false }
+voting-crypto-deps = { version = "=0.2.3", default-features = false, features = ["vct", "poseidon", "proofs", "orchard", "sinsemilla", "rand"] }
+incrementalmerkletree = "0.8.1"
+blake2b_simd = "1"
+thiserror = "2"
+rayon = { version = "1", optional = true }
+# The same (vendored, patched) crate voting-crypto-deps re-exports, named here only to switch on its
+# batch verifier.
+zakura-halo2-proofs = { version = "=1.2.0", default-features = false, features = ["batch"], optional = true }

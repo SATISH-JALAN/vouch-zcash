@@ -1,0 +1,9 @@
+**/target
+**/node_modules
+frontend/.next
+frontend/public
+frontend/visuals-src
+backend/solana
+docs
+.git
+**/.env*

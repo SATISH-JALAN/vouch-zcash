@@ -1,0 +1,20 @@
+{
+  "about": "A real Zcash testnet deposit matched against testnet-exit.pof. The deposit is a self-send from the certificate's wallet, standing in for a rail deposit; it spends the two certified notes into two outputs (payment and one change), so the bundle carries no dummy spends.",
+  "certificate": "testnet-exit.pof",
+  "audience": "rail:testnet-demo",
+  "intent": "c1ea4e7e5a1f0002",
+  "epoch": 202610,
+  "network": "testnet",
+  "anchor": 4460391,
+  "deposits": {
+    "matched": {
+      "height": 4460517,
+      "network": "testnet",
+      "nullifiers": [
+        "7d14d894cd4fbff68e01a04e8820c0aa7dbc45cee7ac74c155707fc4591ea634",
+        "476974717eb3d1ba70d841b2b90b200f0fba5909de2e9c3c1bc19db9711c1233"
+      ],
+      "txid": "ff0a2488543a58b852b22c426313ea00c00de1e79a6fa1710dc3cbae69ab256a"
+    }
+  }
+}

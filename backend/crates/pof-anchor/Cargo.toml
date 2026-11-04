@@ -1,0 +1,31 @@
+[package]
+name = "pof-anchor"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Vouch anchors: rebuild the Ironwood note-commitment root and the spent-nullifier IMT root from public chain data."
+
+[features]
+default = ["client"]
+# The lightwalletd client and the CLI. The snapshot format itself needs no network.
+client = ["dep:zakura-client-backend", "dep:tonic", "dep:tokio", "dep:clap", "dep:futures-util", "dep:rustls"]
+
+[[bin]]
+name = "pof-anchor"
+path = "src/bin/pof-anchor.rs"
+required-features = ["client"]
+
+[dependencies]
+pof-zk = { path = "../pof-zk", features = ["parallel"] }
+voting-crypto-deps = { version = "=0.2.3" }
+blake2b_simd = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+anyhow = "1"
+zakura-client-backend = { version = "0.1.0-rc5", features = ["lightwalletd-tonic", "lightwalletd-tonic-transport", "lightwalletd-tonic-tls-webpki-roots", "orchard"], optional = true }
+tonic = { version = "0.14", features = ["transport", "tls-webpki-roots"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+futures-util = { version = "0.3", optional = true }
+clap = { version = "4", features = ["derive"], optional = true }
+rustls = { version = "0.23", default-features = false, features = ["ring"], optional = true }

@@ -1,0 +1,54 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# build output — Next.js, bundlers, Rust
+.next
+.next-dev
+out
+/dist/
+/build/
+target
+.turbo
+*.tsbuildinfo
+next-env.d.ts
+
+# deploy + env
+.vercel
+.env
+.env.*
+!.env.example
+
+# test + coverage
+coverage
+.nyc_output
+playwright-report
+test-results
+
+# agent tooling and vendored skills (installed per machine with `npx skills add`)
+.agent
+.agents
+.claude
+.cursor
+.windsurf
+.gemini
+.github/copilot-instructions.md
+skills-lock.json
+
+# working notes and source art, not part of the build (root only — src/app/docs is real code)
+/docs/
+frontend/visuals-src
+
+# editor + OS
+.DS_Store
+Thumbs.db
+.idea
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# pof-anchor snapshots: tens of MB, rebuilt from lightwalletd
+*.vsnp
+
+# devnet demo keypairs: never commit key material
+backend/solana/keys/

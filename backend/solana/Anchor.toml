@@ -1,0 +1,17 @@
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+pof_gate = "A6WmRTgEAHC9GHstaj9oD8woVNRw9jgu31bpKVREXn8C"
+pof_credit = "J6ewFZAzcTkbVsYNBrcZvzdBtTTUK5UrpqCg9jiNyra1"
+pof_reserve = "5Q26Tjcd4equ5te5hF15eG4xK6uvkbZtKkEeqdf535h9"
+
+[programs.devnet]
+pof_gate = "A6WmRTgEAHC9GHstaj9oD8woVNRw9jgu31bpKVREXn8C"
+pof_credit = "J6ewFZAzcTkbVsYNBrcZvzdBtTTUK5UrpqCg9jiNyra1"
+pof_reserve = "5Q26Tjcd4equ5te5hF15eG4xK6uvkbZtKkEeqdf535h9"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"

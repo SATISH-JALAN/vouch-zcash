@@ -1,0 +1,31 @@
+{
+  "about": "The first real testnet exit attempt (4 Oct 2026). The certificate (testnet-exit-first-attempt.pof) named the wallet's two notes; deposit 1 spent both, but the wallet split change into 4 outputs, so the Ironwood bundle carried 3 dummy spends whose nullifiers cannot be told from real spends: the strict rule answers Mismatch. Deposit 2 spent change notes the certificate never named: Mismatch, correctly. Lesson: exit transactions must carry no dummy spends (spend >= 2 certified notes into no more outputs than spends), or use the certificate's padding notes as the dummies.",
+  "certificate": "testnet-exit-first-attempt.pof",
+  "audience": "rail:testnet-demo",
+  "intent": "7e5a1c0de4f2b913",
+  "epoch": 202610,
+  "network": "testnet",
+  "deposits": {
+    "matched": {
+      "height": 4460304,
+      "network": "testnet",
+      "nullifiers": [
+        "447752344051be199e26364ac49f4b2a6338c890b6c3ca5ec5a299ce1ae13107",
+        "4d059f07fc436ef38288f55e016870bc1b2f3f78012c88e2e13e57561804fe3f",
+        "2ea6906190932f218b7efd7dea8be5dfba36e94be1ebc8d31beb2a013aa51f1f",
+        "e80b175e4f8757576586e3f6d9598fe4ec6f4b62d93625f11cd802e4194c2303",
+        "bc8694f89326b2c8b10d27cdc32140e96395889ea28c5d0178f3327ffd43d732"
+      ],
+      "txid": "0a563d1f2f05416d02c71a476b85e5a679669d29b7d337bde6224e87d8e07061"
+    },
+    "mismatch": {
+      "height": 4460326,
+      "network": "testnet",
+      "nullifiers": [
+        "462564ce25f72b42d95cef1a41c7125bd2a7bed927ca1398905b96511320072d",
+        "68a88a178dd8dea90f4c4e2b92955061a0dc5dfa7109cab3f130074dc5eb0b1d"
+      ],
+      "txid": "dbc602b7a8e9390568c10898bb6d021e0aaa5c356e5459ac682b3b8aa0c8421d"
+    }
+  }
+}

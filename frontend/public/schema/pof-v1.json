@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "/schema/pof-v1.json",
+  "title": "Vouch verification result, formats 1 and 2",
+  "description": "What pof-verify returns for one .pof file: the WASM verify() result, `pof-verify check --json`, and the attestor's /v1/verify response. `envelope` is the JSON projection of the proof itself; hex strings are lowercase, amounts are zatoshi, times are unix seconds.",
+  "type": "object",
+  "required": ["verdict", "checks", "envelope", "sizeBytes", "checksum", "anchor", "scope", "tags", "revealed", "now", "verifier"],
+  "additionalProperties": false,
+  "properties": {
+    "verdict": { "$ref": "#/$defs/verdict" },
+    "checks": {
+      "description": "The six checks, cheapest first. A check after the first failure is not-run.",
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/check" }
+    },
+    "envelope": {
+      "description": "The decoded proof, or null when the file did not parse.",
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/envelope" }]
+    },
+    "sizeBytes": { "type": "integer", "minimum": 0 },
+    "checksum": {
+      "description": "blake2b-256 of the body, when the file got that far.",
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hex32" }]
+    },
+    "anchor": {
+      "description": "The published anchor record the proof matched, if any.",
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/anchorRecord" }]
+    },
+    "scope": {
+      "description": "The scope the proof's tags belong to: in format 2 blake2b of (circuit, audience, epoch), in format 1 the statement itself. Null when the file did not parse.",
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hex32" }]
+    },
+    "tags": {
+      "description": "The proof's five per-note tags. The same note gives the same tag inside one scope, so a verifier records them for a Valid verdict and passes them back as its reuse registry.",
+      "type": "array",
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/hex32" }
+    },
+    "revealed": {
+      "description": "An exit certificate's revealed nullifiers (circuit 2, reveal = 1): a deposit it certifies may spend only these. Empty for any other proof.",
+      "type": "array",
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/hex32" }
+    },
+    "now": { "description": "The time the verdict was evaluated at.", "$ref": "#/$defs/time" },
+    "verifier": { "description": "Name and version of the verifier, e.g. \"pof-verify 0.1.0\".", "type": "string", "pattern": "^pof-verify " }
+  },
+  "$defs": {
+    "hex16": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "hex32": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "hex64": { "type": "string", "pattern": "^[0-9a-f]{128}$" },
+    "time": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "zatoshi": { "type": "integer", "minimum": 0, "maximum": 2100000000000000 },
+    "height": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+    "claim": {
+      "description": "The one statement a proof asserts. v1 provers make HoldsAtLeast, in whole 0.125 ZEC units (12,500,000 zatoshi); the other kinds are reserved.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "zatoshi"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "HoldsAtLeast" }, "zatoshi": { "$ref": "#/$defs/zatoshi" } }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "zatoshi"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "HoldsExactly" }, "zatoshi": { "$ref": "#/$defs/zatoshi" } }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "txid", "zatoshi"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "ReceivedPayment" }, "txid": { "$ref": "#/$defs/hex32" }, "zatoshi": { "$ref": "#/$defs/zatoshi" } }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "zatoshi", "fromHeight"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "ReceivedAtLeastSince" }, "zatoshi": { "$ref": "#/$defs/zatoshi" }, "fromHeight": { "$ref": "#/$defs/height" } }
+        }
+      ]
+    },
+    "verdict": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "claim", "anchorHeight"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "Valid" },
+            "claim": { "$ref": "#/$defs/claim" },
+            "anchorHeight": { "$ref": "#/$defs/height" },
+            "dormantSince": { "description": "Present when the proof shows the notes unmoved since this earlier block.", "$ref": "#/$defs/height" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "at"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "Expired" }, "at": { "$ref": "#/$defs/time" } }
+        },
+        { "type": "object", "required": ["kind"], "additionalProperties": false, "properties": { "kind": { "const": "Revoked" } } },
+        { "type": "object", "required": ["kind"], "additionalProperties": false, "properties": { "kind": { "const": "WrongAudience" } } },
+        { "type": "object", "required": ["kind"], "additionalProperties": false, "properties": { "kind": { "const": "AnchorNotFound" } } },
+        {
+          "description": "The spent set the proof was made against is older than the verifier's policy allows.",
+          "type": "object",
+          "required": ["kind", "anchorHeight"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "AnchorTooOld" }, "anchorHeight": { "$ref": "#/$defs/height" } }
+        },
+        {
+          "description": "The notes are shown unmoved since a later block than the verifier's policy requires.",
+          "type": "object",
+          "required": ["kind", "dormantSince", "required"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "NotDormantLongEnough" }, "dormantSince": { "$ref": "#/$defs/height" }, "required": { "$ref": "#/$defs/height" } }
+        },
+        {
+          "description": "Made for this verifier, but in another period than the one it asked for (or a format 1 proof, which has no shared period).",
+          "type": "object",
+          "required": ["kind", "epoch", "required"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "WrongScope" }, "epoch": { "$ref": "#/$defs/time" }, "required": { "$ref": "#/$defs/time" } }
+        },
+        {
+          "description": "A valid proof whose notes the verifier already accepted in the same period.",
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "AlreadyUsed" } }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "detail"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "ProofInvalid" }, "detail": { "type": "string" } }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "reason"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "Malformed" }, "reason": { "type": "string" } }
+        }
+      ]
+    },
+    "check": {
+      "type": "object",
+      "required": ["id", "label", "status", "detail"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "enum": ["format", "expiry", "revocation", "audience", "anchor", "proof"] },
+        "label": { "type": "string" },
+        "status": { "enum": ["pass", "fail", "not-run"] },
+        "detail": { "type": "string" }
+      }
+    },
+    "anchor": {
+      "description": "The two roots the proof was proved against and their blocks. height: the spent set (the block the proof is as of). ncHeight: the note-commitment tree; equal to height in format 1, earlier when the notes are shown unmoved since then.",
+      "type": "object",
+      "required": ["height", "ncRoot", "nfRoot", "ncHeight"],
+      "additionalProperties": false,
+      "properties": {
+        "height": { "$ref": "#/$defs/height" },
+        "ncRoot": { "description": "Ironwood note-commitment tree root at ncHeight.", "$ref": "#/$defs/hex32" },
+        "nfRoot": { "description": "Spent-nullifier indexed Merkle tree root at height.", "$ref": "#/$defs/hex32" },
+        "ncHeight": { "$ref": "#/$defs/height" }
+      }
+    },
+    "anchorRecord": {
+      "description": "An entry of the published anchor table (/api/anchors). blockHash is null for the demo ledger.",
+      "type": "object",
+      "required": ["network", "height", "blockHash", "ncRoot", "nfRoot"],
+      "additionalProperties": false,
+      "properties": {
+        "network": { "description": "mainnet, testnet or demo.", "type": "string" },
+        "height": { "$ref": "#/$defs/height" },
+        "blockHash": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hex32" }] },
+        "ncRoot": { "$ref": "#/$defs/hex32" },
+        "nfRoot": { "$ref": "#/$defs/hex32" }
+      }
+    },
+    "envelope": {
+      "description": "The JSON projection of a .pof file. The version comes from the file header; everything else is the body.",
+      "type": "object",
+      "required": ["version", "circuit", "claim", "audience", "epoch", "binding", "anchor", "issuedAt", "expiresAt", "revocation", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "version": { "description": "1, or 2 with the circuit, the epoch and a second anchor height.", "enum": [1, 2] },
+        "circuit": { "description": "1: the threshold circuit. 2: threshold plus revealed nullifiers (exit certificates). Always 1 in format 1.", "enum": [1, 2] },
+        "claim": { "$ref": "#/$defs/claim" },
+        "epoch": { "description": "The verifier's period. With the circuit and audience it fixes the scope: the same notes give the same tags inside one scope. Always 0 in format 1.", "$ref": "#/$defs/time" },
+        "audience": { "description": "blake2b-256 of \"pof-audience:\" + the verifier's identifier, trimmed and lowercased. Never the name.", "$ref": "#/$defs/hex32" },
+        "binding": { "description": "32 bytes the proof is bound to (a Solana pubkey for on-chain audiences), all zero when unbound.", "$ref": "#/$defs/hex32" },
+        "anchor": { "$ref": "#/$defs/anchor" },
+        "issuedAt": { "$ref": "#/$defs/time" },
+        "expiresAt": { "description": "Exclusive: at this second the proof is already expired.", "$ref": "#/$defs/time" },
+        "revocation": { "description": "The proof id: the first 16 bytes of blake2b(secret). Publishing the secret revokes it.", "$ref": "#/$defs/hex16" },
+        "evidence": {
+          "type": "object",
+          "required": ["publicInputs", "proof", "signature"],
+          "additionalProperties": false,
+          "properties": {
+            "publicInputs": { "description": "Public inputs the verifier cannot derive (the rest it derives from the envelope).", "type": "array", "maxItems": 24, "items": { "$ref": "#/$defs/hex32" } },
+            "proof": { "description": "Halo2 proof bytes, at most 16 KiB.", "type": "string", "pattern": "^([0-9a-f]{2}){0,16384}$" },
+            "signature": { "description": "RedPallas spend-authorisation signature.", "$ref": "#/$defs/hex64" }
+          }
+        }
+      }
+    }
+  }
+}

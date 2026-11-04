@@ -1,0 +1,12 @@
+[package]
+name = "pof-core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Vouch proof format: claims, the envelope, encoding. No I/O, no network, no clock."
+
+[dependencies]
+blake2b_simd = "1"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+hex = "0.4"

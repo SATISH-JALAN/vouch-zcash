@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["vendor/voting-circuits", "crates/*"]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+# wasm32 only: maybe-rayon 0.1.1's serial fallback lacks helpers zakura-pasta-curves calls.
+# See vendor/maybe-rayon/VOUCH-MODIFICATIONS.md. Native builds use real rayon either way.
+[patch.crates-io]
+maybe-rayon = { path = "vendor/maybe-rayon" }
+voting-crypto-deps = { path = "vendor/voting-crypto-deps" }
+zakura-halo2-proofs = { path = "vendor/zakura-halo2-proofs" }
