@@ -1,0 +1,23 @@
+{
+  "name": "vouch-shopper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An AI shopping agent that buys through Bitrefill, pays from shielded ZEC, and hands over a Vouch Receipt instead of a viewing key.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --no-warnings src/index.ts",
+    "selftest": "node --no-warnings src/index.ts selftest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
+    "@modelcontextprotocol/sdk": "^1.32.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.9"
+  }
+}
