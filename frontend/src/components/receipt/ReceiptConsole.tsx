@@ -10,6 +10,7 @@ import { BtnLabel } from '@/components/motion/BtnLabel'
 
 const VECTORS = [
   { file: 'testnet-paid.json', label: 'Real testnet payment' },
+  { file: 'bitrefill-agent.json', label: 'Agent: Bitrefill order' },
   { file: 'demo-paid.json', label: 'Demo ledger payment' },
   { file: 'testnet-wrong-order.json', label: 'Edited order (refused)' },
   { file: 'demo-not-certified.json', label: 'Uncertified note (refused)' },

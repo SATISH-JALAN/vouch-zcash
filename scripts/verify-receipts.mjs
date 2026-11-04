@@ -42,6 +42,8 @@ async function verify(bytes, audience, { policy, now }) {
 
 const want = {
   'testnet-paid': 'Valid',
+  // written by the agent (agent/) for a real Bitrefill invoice; copied from agent/out, not generated
+  'bitrefill-agent': 'Valid',
   'demo-paid': 'Valid',
   'testnet-wrong-order': 'WrongOrder',
   'demo-not-certified': 'NotPaidByCertifiedNotes',

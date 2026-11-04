@@ -6,6 +6,7 @@
 //
 // The real Bitrefill receipts come from the agent (agent/), which makes a certificate bound to the
 // Bitrefill invoice before paying; these vectors show the format and every refusal on known data.
+// fixtures/receipts/bitrefill-agent.json is one such agent receipt, copied in by hand and left alone here.
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 const root = new URL('../', import.meta.url)
