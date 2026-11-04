@@ -6,6 +6,8 @@
 </p>
 
 <p align="center">
+  <img alt="Free Society Hack · Mumbai · 4 Nov 2026" src="https://img.shields.io/badge/Free%20Society%20Hack-Mumbai%20·%204%20Nov%202026-c8452f">
+  <img alt="Tracks: Privacy (Zcash) and Agentic Commerce (Bitrefill)" src="https://img.shields.io/badge/tracks-Privacy%20%2B%20Agentic%20Commerce-1a1d1b">
   <img alt="Zcash testnet" src="https://img.shields.io/badge/zcash-testnet-a5761b">
   <img alt="Halo2, no trusted setup" src="https://img.shields.io/badge/halo2-no%20trusted%20setup-1a1d1b">
   <img alt="Licence: MIT or Apache-2.0" src="https://img.shields.io/badge/licence-MIT%20%2F%20Apache--2.0-1a1d1b">
@@ -48,27 +50,30 @@ The proof is a 12 KB `.pof` file: a Halo2 zero-knowledge proof over the Zcash ch
 
 ## Contents
 
-[At a glance](#at-a-glance) · [What’s new](#whats-new) · [Vouch Receipts](#new-vouch-receipts) · [Vouch Shopper agent](#new-vouch-shopper-an-agent-that-pays-privately) · [Never a dead end](#new-a-refusal-is-never-a-dead-end) · [How it works](#how-it-works) · [Why only Zcash](#why-this-only-works-on-zcash) · [The products](#the-products) · [Proof it works](#proof-it-works) · [Honest limits](#honest-limits) · [Running it](#running-it) · [Tests](#tests) · [Architecture](#architecture) · [Repo layout](#repo-layout) · [Trust model](#trust-model) · [Next](#next-30-day-milestone) · [Credits](#credits-and-licence)
+[Free Society Hack submission](#free-society-hack-submission) · [Built at the hack](#built-at-free-society-hack) · [Vouch Receipts](#new-vouch-receipts) · [Vouch Shopper agent](#new-vouch-shopper-the-agentic-commerce-track) · [Never a dead end](#new-a-refusal-is-never-a-dead-end) · [How it works](#how-it-works) · [Why only Zcash](#why-this-only-works-on-zcash) · [The products](#the-products) · [Proof it works](#proof-it-works) · [Honest limits](#honest-limits) · [Running it](#running-it) · [Tests](#tests) · [Architecture](#architecture) · [Repo layout](#repo-layout) · [Trust model](#trust-model) · [30-day milestone](#30-day-milestone-zcash-ecosystem-prize) · [Credits](#credits-and-licence)
 
-## At a glance
+## Free Society Hack submission
 
 | | |
 | --- | --- |
+| Event | **Free Society Hack**, WebZero × Zcash × Bitrefill, Mumbai, 4 November 2026 |
+| Tracks | **Privacy (Zcash)** and **Agentic Commerce (Bitrefill)** |
 | One line | Replace the viewing key with one fact: an exit cleared, an order paid, a balance shown, to one party, revocably. |
-| For privacy | Makes private money the easy default at the exact moment it fails today (leaving the pool), without asking the user to reveal their wallet. The next builder gets a file format, a verifier that runs anywhere, and an HTTP API. |
-| For agents | An agent that finds and buys through Bitrefill’s MCP tools, behind a human approval gate, pays from shielded ZEC, and leaves a per-order receipt that proves the purchase without exposing the wallet. |
+| Privacy track | Makes private money the easy default at the exact moment it fails today (leaving the pool), without asking the user to reveal their wallet. The next builder gets a file format, a verifier that runs anywhere, and an HTTP API. |
+| Agentic Commerce track | An agent that finds and buys through Bitrefill’s MCP tools, behind a human approval gate, pays from shielded ZEC, and leaves a per-order receipt that proves the purchase without exposing the wallet. |
+| Demo video | *(link)* |
 | Try it in one minute | Open **[/receipt](https://vouch-zcash.vercel.app/receipt)** → *Real testnet payment* → **Paid.** Then *Edited order* → **Not this order.** |
 
-## What’s new
+## Built at Free Society Hack
 
-| New | Where |
+| Built at the hack | Where |
 | --- | --- |
 | **Vouch Receipts**: a new disclosure, *“order N was paid by the holder of these notes”*, with its format, five-check rules and refusal verdicts | [`frontend/src/lib/vouch-receipt.ts`](frontend/src/lib/vouch-receipt.ts) |
 | The receipt check in the attestor, re-reading the payment from **lightwalletd** so the receipt’s own copy is never trusted: `POST /v1/receipts/verify` | [`backend/crates/pof-attest/src/receipt.rs`](backend/crates/pof-attest/src/receipt.rs) |
 | The **`/receipt`** page: drop a receipt, get one answer, in the browser, plus “re-read the payment from the chain” | [`frontend/src/components/receipt/ReceiptConsole.tsx`](frontend/src/components/receipt/ReceiptConsole.tsx) |
 | Personalised BLAKE2b in the browser, so it computes `intent_binding` exactly as Rust does (pinned by a test on the real testnet certificate) | [`frontend/src/lib/pof/blake2b.ts`](frontend/src/lib/pof/blake2b.ts), [`hash.ts`](frontend/src/lib/pof/hash.ts) |
 | Receipt test vectors from the real testnet certificate and transaction, plus two tampered ones, and a runner | [`scripts/make-receipts.mjs`](scripts/make-receipts.mjs), [`scripts/verify-receipts.mjs`](scripts/verify-receipts.mjs), [`fixtures/receipts/`](fixtures/receipts) |
-| **Vouch Shopper**, the agent: Claude + Bitrefill MCP + Vouch, with an approval gate on every purchase and a keyless `selftest` | [`agent/`](agent) |
+| **Vouch Shopper**, the agent: a tool-calling model (Gemini, or Claude, Groq, OpenRouter, OpenAI) + Bitrefill MCP + Vouch, with an approval gate on every purchase and a keyless `selftest` | [`agent/`](agent) |
 | **Never a dead end**: every refusal in the rail console now says what to do next, ending with the viewing-key fallback | [`frontend/src/components/rail/RailConsole.tsx`](frontend/src/components/rail/RailConsole.tsx) |
 | The re-pitch: freedom first, compliance second, Solana out of the headline | landing page, this README |
 
@@ -119,7 +124,7 @@ A receipt is about the past, so a certificate that has expired since is checked 
 | `demo-paid` | Demo ledger | `Valid` | `Valid` |
 | `demo-not-certified` | The payment also spends a note the certificate never named | `NotPaidByCertifiedNotes` | `NotPaidByCertifiedNotes` |
 
-## New: Vouch Shopper, an agent that pays privately
+## New: Vouch Shopper, the Agentic Commerce track
 
 An AI agent ([`agent/`](agent)) that turns “buy me a ₹500 Swiggy gift card” into a purchase, without ever touching a seed or a viewing key:
 
@@ -136,6 +141,8 @@ Model: any of Claude (`ANTHROPIC_API_KEY`) or an OpenAI-compatible API with tool
 | `demo` (default) | a real proof over the demo chain | **simulated** (spends the first certified note) | real, created and **not paid by the demo coins**, said plainly |
 | `testnet` | from your testnet wallet | you send TAZ and paste the txid; nullifiers read from lightwalletd | real, not settled by TAZ (no value) |
 | `mainnet` | from your wallet | through a rail that takes shielded ZEC | paid by the rail |
+
+**A real run** (Gemini 3.5 Flash, Bitrefill’s live catalog): *“Buy a 500 INR Swiggy gift card”* → `search-products` → `get-product-details` → the cart shown and approved → `buy-products` created invoice `b781128b-d156-4e5a-849b-2b64ec2288da` (500 INR, 5.49 USDC, `usdc_base`, left unpaid) → a certificate bound to `bitrefill:invoice:b781128b-…`, verified in 168 ms → `receipt-b781128b-….json` → attestor verdict **`Valid`** (demo ledger).
 
 `npm run selftest` runs the whole Vouch half with no API keys: certify → pay (demo) → receipt → attestor verdict `Valid`. Details: [`agent/README.md`](agent/README.md).
 
@@ -392,9 +399,9 @@ Everything a verifier relies on is public and re-derivable. A wrong anchor-table
 
 **Demo, testnet and simulated are said wherever they apply.** Including in the agent’s own summary.
 
-## Next: 30-day milestone
+## 30-day milestone (Zcash Ecosystem Prize)
 
-One milestone, to agree with a wallet partner:
+One milestone, to agree with an ecosystem partner after the hack:
 
 > **“Prove for exit” in a real wallet:** a wallet button that makes an exit certificate for a rail’s request link and builds the deposit from the certified notes only (no dummy spends), plus one mainnet certificate and receipt, verified on `/verify` and `/receipt`.
 
