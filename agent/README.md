@@ -32,7 +32,7 @@ you ▸ Buy a 500 INR Swiggy gift card
 
 The agent never sees a seed or a viewing key. It sees file paths and verdicts. Bitrefill’s MCP server is reached from this process (with the MCP TypeScript SDK) rather than from the model provider’s side, so the purchase gate is enforced here.
 
-The model is whichever key you have (`src/models.ts`): **Claude** with `ANTHROPIC_API_KEY`, or any **OpenAI-compatible API with tool calling** with `LLM_API_KEY`: Google Gemini (default, free key at aistudio.google.com/apikey), Groq, OpenRouter or OpenAI.
+The model is whichever key you have (`src/models.ts`): **Claude** with `ANTHROPIC_API_KEY`, or any **OpenAI-compatible API with tool calling** with `LLM_API_KEY`: Google Gemini (default `gemini-3.5-flash`, free key at aistudio.google.com/apikey), Groq, OpenRouter or OpenAI.
 
 ## Run it
 

@@ -32,8 +32,8 @@ export interface Model {
 }
 
 /** Known OpenAI-compatible endpoints. Any other: set LLM_BASE_URL and LLM_MODEL. */
-const PROVIDERS: Record<string, { baseUrl: string; model: string }> = {
-  gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash' },
+const PROVIDERS: Record<string, { baseUrl: string; model: string; fallbacks?: string[] }> = {
+  gemini: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.5-flash', fallbacks: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'] },
   groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
   openrouter: { baseUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-oss-120b' },
   openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini' },
@@ -54,7 +54,9 @@ export function modelFromEnv(system: string, prompt: string, tools: ToolDef[]): 
   const baseUrl = (process.env.LLM_BASE_URL ?? preset?.baseUrl)?.replace(/\/$/, '')
   const model = process.env.LLM_MODEL ?? preset?.model
   if (!baseUrl || !model) throw new Error(`unknown LLM_PROVIDER ${provider}: set LLM_BASE_URL and LLM_MODEL`)
-  return openaiCompatible(baseUrl, key, model, system, prompt, tools)
+  // when the model is overloaded, the next one in line answers instead
+  const fallbacks = process.env.LLM_FALLBACK_MODELS !== undefined ? process.env.LLM_FALLBACK_MODELS.split(',').map((m) => m.trim()).filter(Boolean) : (preset?.fallbacks ?? [])
+  return openaiCompatible(baseUrl, key, [model, ...fallbacks.filter((m) => m !== model)], system, prompt, tools)
 }
 
 function claude(system: string, prompt: string, tools: ToolDef[]): Model {
@@ -107,7 +109,10 @@ interface ChatMessage {
   tool_call_id?: string
 }
 
-function openaiCompatible(baseUrl: string, key: string, model: string, system: string, prompt: string, tools: ToolDef[]): Model {
+const RETRY_MS = [2_000, 6_000]
+
+function openaiCompatible(baseUrl: string, key: string, models: string[], system: string, prompt: string, tools: ToolDef[]): Model {
+  const model = models[0]!
   const defs = tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: portable(t.schema) } }))
   const messages: ChatMessage[] = [
     { role: 'system', content: system },
@@ -116,20 +121,29 @@ function openaiCompatible(baseUrl: string, key: string, model: string, system: s
   return {
     label: `${baseUrl.replace(/^https:\/\//, '').split('/')[0]} · ${model}`,
     async turn() {
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-        body: JSON.stringify({ model, messages, tools: defs, tool_choice: 'auto' }),
-        signal: AbortSignal.timeout(120_000),
-      })
-      const body = (await res.json().catch(() => null)) as {
-        choices?: { message: ChatMessage; finish_reason?: string }[]
-        error?: { message?: string } | string
-      } | null
+      type Body = { choices?: { message: ChatMessage; finish_reason?: string }[]; error?: { message?: string } | string } | null
+      let res: Response | undefined
+      let body: Body = null
+      let used = model
+      // 429 / 503 (rate limit, overload): wait and retry, then move to the next model
+      attempts: for (const m of models) {
+        for (let i = 0; i <= RETRY_MS.length; i++) {
+          res = await fetch(`${baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+            body: JSON.stringify({ model: m, messages, tools: defs, tool_choice: 'auto' }),
+            signal: AbortSignal.timeout(120_000),
+          })
+          body = (await res.json().catch(() => null)) as Body
+          used = m
+          if (res.status !== 429 && res.status !== 503) break attempts
+          if (i < RETRY_MS.length) await new Promise((r) => setTimeout(r, RETRY_MS[i]))
+        }
+      }
       const choice = body?.choices?.[0]
-      if (!res.ok || !choice) {
-        const e = body?.error
-        throw new Error(`${model}: ${typeof e === 'string' ? e : (e?.message ?? `HTTP ${res.status}`)}`)
+      if (!res?.ok || !choice) {
+        const e = Array.isArray(body) ? (body[0] as { error?: { message?: string } })?.error : body?.error
+        throw new Error(`${used}: ${typeof e === 'string' ? e : (e?.message ?? `HTTP ${res?.status}`)}`)
       }
       if (choice.finish_reason === 'length') throw new Error('the reply was cut off (length)')
       const m = choice.message

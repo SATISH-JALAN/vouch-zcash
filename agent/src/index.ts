@@ -82,7 +82,9 @@ function system(c: Config, paymentMethod: string): string {
 /** Bitrefill's MCP tools, allowlisted, as tool definitions for the model. */
 async function bitrefill(apiKey: string) {
   const client = new Client({ name: 'vouch-shopper', version: '0.1.0' })
-  await client.connect(new StreamableHTTPClientTransport(new URL(`https://api.bitrefill.com/mcp/${apiKey}`)))
+  // the key goes in a header: Bitrefill has retired the /mcp/<key> form
+  const url = new URL(process.env.BITREFILL_MCP_URL ?? 'https://api.bitrefill.com/mcp')
+  await client.connect(new StreamableHTTPClientTransport(url, { requestInit: { headers: { authorization: `Bearer ${apiKey}` } } }))
   const { tools } = await client.listTools()
   const allowed = tools.filter((t) => BITREFILL_TOOLS.includes(t.name))
   const missing = BITREFILL_TOOLS.filter((n) => !allowed.some((t) => t.name === n))
