@@ -306,7 +306,7 @@ pub async fn match_deposit(State(app): State<Arc<App>>, headers: HeaderMap, Path
 }
 
 #[cfg(feature = "rail")]
-async fn fetch_nullifiers(network: &str, txid: &str) -> anyhow::Result<(u32, Vec<String>)> {
+pub(crate) async fn fetch_nullifiers(network: &str, txid: &str) -> anyhow::Result<(u32, Vec<String>)> {
     let net = pof_anchor::Network::parse(network).ok_or_else(|| anyhow::anyhow!("deposits are read on mainnet or testnet, not {network}"))?;
     let server = std::env::var(format!("POF_LIGHTWALLETD_{}", network.to_uppercase())).unwrap_or_else(|_| net.default_server().into());
     let mut lwd = pof_anchor::client::Lightwalletd::connect(&server).await?;
@@ -316,7 +316,7 @@ async fn fetch_nullifiers(network: &str, txid: &str) -> anyhow::Result<(u32, Vec
 }
 
 #[cfg(not(feature = "rail"))]
-async fn fetch_nullifiers(_network: &str, _txid: &str) -> anyhow::Result<(u32, Vec<String>)> {
+pub(crate) async fn fetch_nullifiers(_network: &str, _txid: &str) -> anyhow::Result<(u32, Vec<String>)> {
     anyhow::bail!("this build reads no transactions (feature rail is off): post the nullifiers instead")
 }
 

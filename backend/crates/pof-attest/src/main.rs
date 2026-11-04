@@ -13,6 +13,7 @@
 //!   POST /v1/demo/prove   {request, bindSolana?} → {proof, revocationSecret, …}   (feature demo-prover)
 //!   GET  /health
 //!   …and the rail API (exit certificates, deposit matching, batches): see rail.rs.
+//!   POST /v1/receipts/verify {receipt}            → Vouch Receipts: see receipt.rs.
 //!
 //! Environment: POF_ATTEST_KEY (hex Ed25519 seed; an ephemeral key is used if unset),
 //! POF_ANCHORS (anchor table JSON, required), POF_REVOCATIONS_URL (the site's /api/revocations),
@@ -36,6 +37,7 @@ use pof_core::{subject_hash, Envelope};
 use pof_verify::{verify, verify_batch, AnchorRecord, BatchResult, Context, Policy, Verdict, ZkVerifier};
 
 mod rail;
+mod receipt;
 use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::{Mutex, Semaphore};
@@ -124,9 +126,18 @@ impl App {
 
     /// One proof, with a verifier's own policy and reuse registry (the rail API).
     pub(crate) async fn check_with(&self, proof: &[u8], audience: &str, policy: Policy, seen: &[String]) -> Result<pof_verify::VerificationResult, Refusal> {
+        self.check_seen_at(proof, audience, policy, seen, now()).await
+    }
+
+    /// One proof as of an earlier moment: a receipt checks its certificate as of the payment.
+    pub(crate) async fn check_at(&self, proof: &[u8], audience: &str, policy: Policy, at: u64) -> Result<pof_verify::VerificationResult, Refusal> {
+        self.check_seen_at(proof, audience, policy, &[], at).await
+    }
+
+    async fn check_seen_at(&self, proof: &[u8], audience: &str, policy: Policy, seen: &[String], at: u64) -> Result<pof_verify::VerificationResult, Refusal> {
         let revoked = self.revoked().await;
         let _permit = tokio::time::timeout(Duration::from_secs(5), self.verifiers.acquire()).await.map_err(|_| BUSY)?.map_err(|_| BUSY)?;
-        let ctx = Context { audience, anchors: &self.anchors, revoked_secrets: &revoked, now: now(), zk: &self.zk, policy, seen };
+        let ctx = Context { audience, anchors: &self.anchors, revoked_secrets: &revoked, now: at, zk: &self.zk, policy, seen };
         // CPU-bound: keep it off the async workers so /health and the rest stay responsive.
         Ok(tokio::task::block_in_place(|| verify(proof, &ctx)))
     }
@@ -400,6 +411,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/v1/certificates", post(rail::submit).get(rail::list))
         .route("/v1/certificates/{id}", get(rail::get_one))
         .route("/v1/certificates/{id}/match", post(rail::match_deposit))
+        .route("/v1/receipts/verify", post(receipt::verify))
         // a batch of up to 64 proofs is ~1 MB as base64url
         .route("/v1/batch", post(rail::batch).layer(DefaultBodyLimit::max(2 * 1024 * 1024)));
     #[cfg(feature = "demo-prover")]
