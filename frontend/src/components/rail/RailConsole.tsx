@@ -352,6 +352,8 @@ function CertificateCard({
         </p>
       )}
 
+      {(entry.status === 'refused' || entry.status === 'mismatch') && <NextSteps entry={entry} />}
+
       {entry.status !== 'refused' && (
         <div className="mt-6 space-y-3 border-t border-border pt-5">
           <p className="t-eyebrow text-ink-3">WHEN THE DEPOSIT LANDS</p>
@@ -400,6 +402,60 @@ function CertificateCard({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** What the rail can do next for each refusal. Option one is always a fresh certificate; the
+ *  last resort is always the old way, chosen by the holder: a viewing key. Never a dead end. */
+function nextSteps(entry: Entry): { first: string; why: string } {
+  if (entry.status === 'mismatch') {
+    return {
+      first: 'Ask the holder to send again from certified notes only',
+      why: 'The deposit spent a note the certificate did not name. Wallets that add a dummy spend look the same: ask for a transaction built from the certified notes alone, or a new certificate that names the notes actually sent.',
+    }
+  }
+  const v = entry.result.verdict
+  switch (v.kind) {
+    case 'Valid':
+      return { first: 'Ask for an exit certificate, not a plain proof', why: 'The proof is valid but names no notes, so a deposit cannot be matched to it. The holder adds --exit.' }
+    case 'Expired':
+    case 'AnchorTooOld':
+    case 'WrongScope':
+    case 'NotDormantLongEnough':
+      return { first: 'Send the holder a fresh request', why: 'Nothing is wrong with the coins: the certificate answers an older or different request. A new one under your current policy takes a minute.' }
+    case 'AlreadyUsed':
+      return { first: 'Hold, and ask what else is pledged', why: 'These coins were already certified to you in this period. That is the reuse the period exists to show.' }
+    case 'WrongAudience':
+      return { first: 'Ask for a certificate made for you', why: 'This one names a different rail. Passing a certificate on is visible, by design.' }
+    default:
+      return { first: 'Reject this file, and ask for a new one', why: 'It does not verify. Treat it as you would a forged document.' }
+  }
+}
+
+function NextSteps({ entry }: { entry: Entry }) {
+  const s = nextSteps(entry)
+  return (
+    <div className="mt-6 border-t border-border pt-5">
+      <p className="t-eyebrow text-ink-3">NOT A DEAD END · WHAT YOU CAN DO NEXT</p>
+      <ol className="t-data mt-3 space-y-3">
+        <li className="flex gap-3">
+          <span className="font-mono text-ink-3">1</span>
+          <span>
+            <span className="text-ink">{s.first}.</span> <span className="text-ink-2">{s.why}</span>
+          </span>
+        </li>
+        <li className="flex gap-3">
+          <span className="font-mono text-ink-3">2</span>
+          <span>
+            <span className="text-ink">Fall back: the holder may share a viewing key.</span>{' '}
+            <span className="text-ink-2">
+              The way it works today, and the holder’s choice to make. It shows you every payment the wallet ever received, so it is the last
+              resort, not the first.
+            </span>
+          </span>
+        </li>
+      </ol>
     </div>
   )
 }
