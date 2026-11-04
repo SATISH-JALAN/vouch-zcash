@@ -6,12 +6,12 @@ export const BRAND = 'Vouch'
 export const TAGLINE = 'Prove what you hold. Reveal nothing else.'
 
 export const DESCRIPTION =
-  'The disclosure layer for shielded Zcash. Instead of a viewing key, prove one fact to one party: at least X ZEC, in notes unmoved since block H, and these are the notes in the deposit. Anyone can check it against the public chain.'
+  'Venues ask for your viewing key. Vouch gives them one fact instead: at least X ZEC, in notes unmoved since block H; or that one order was paid, by you. To one party, until an expiry, revocable. Anyone can check it against the public chain.'
 
 export const SUBMISSION = {
-  event: "CRYPTO WORLD'S FAIR 2026",
-  track: 'ZCASH TRACK',
-  date: '12 OCT 2026',
+  event: 'BUILT ON ZCASH',
+  track: 'TESTNET · NOT AUDITED',
+  date: 'NOV 2026',
 } as const
 
 export const LINKS = {
@@ -33,6 +33,7 @@ export const NAV = [
   { href: '/prove', label: 'Prove' },
   // wide: only from the md breakpoint; phones reach them from the footer
   { href: '/rail', label: 'Rail', wide: true },
+  { href: '/receipt', label: 'Receipts', wide: true },
   { href: '/reserves', label: 'Reserves', wide: true },
   { href: '/demo', label: 'Demo' },
   // the docs are their own site: a new tab, so the page you were on stays open

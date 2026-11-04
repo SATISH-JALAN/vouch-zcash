@@ -105,8 +105,8 @@ export function Hero() {
 
           <div data-iris-lift="">
             <p data-enter="" className="t-prose mt-10 max-w-[54ch] text-on-dark/80">
-              Zcash gives you one disclosure tool: a viewing key that reveals everything you have ever received, permanently. Vouch proves a
-              single fact instead: enough to clear an exit, open a credit line or back a reserve.
+              Venues ask for your viewing key: every payment you have ever received, for ever. Vouch gives them one fact instead, to one
+              party, until an expiry: enough to clear a held exit, show that one order was paid, or back a reserve.
             </p>
 
             <div className="mt-11 flex flex-wrap gap-3">
@@ -120,7 +120,7 @@ export function Hero() {
 
             <p data-enter="" className="t-data-sm mt-10 uppercase tracking-[0.16em] text-on-dark/70">
               Built on <span className="text-on-dark">Zcash</span> · <span className="text-on-dark">Ironwood pool</span> ·{' '}
-              <span className="text-on-dark">Solana</span>
+              <span className="text-on-dark">Halo2, no trusted setup</span>
             </p>
           </div>
         </div>

@@ -27,7 +27,11 @@ export function Problem() {
                 the ones that have nothing to do with them.
               </p>
               <p className="t-prose">
-                So nobody discloses. And because nobody discloses, more than $1.7 billion of shielded ZEC cannot be borrowed against, pledged,
+                So venues fill the silence themselves: they hold the shielded deposit as “unknown”, or demand the key. Privacy turns into a
+                penalty, and the people who use it are the ones who pay it.
+              </p>
+              <p className="t-prose">
+                And nobody discloses willingly. And because nobody discloses, more than $1.7 billion of shielded ZEC cannot be borrowed against, pledged,
                 underwritten or presented to a counterparty. The money is there. There is no way to show it is there.
               </p>
             </div>

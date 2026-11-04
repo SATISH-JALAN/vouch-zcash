@@ -17,12 +17,12 @@ const CELLS = [
     lines: ['A swap rail learns the coins predate block H and have not moved since.', 'And that they are the exact notes in the deposit, not a wallet history.'],
   },
   {
-    tag: 'Collateral',
-    title: ['Collateral', 'without custody'],
+    tag: 'Receipts',
+    title: ['Receipts', 'for one order'],
     img: '/visuals/unlock-receipts.webp',
     pos: '50% 45%',
     alt: 'Oil painting: a shopkeeper and a customer shake hands over a sealed card; her purse stays closed.',
-    lines: ['A lender learns the position clears their bar, and sees it if the same coins come back twice.', 'The ZEC never leaves Zcash and nobody else holds it.'],
+    lines: ['An accountant learns that one order was paid, by the holder of these notes.', 'Not the wallet, not its balance, not any other payment. Your shopping agent hands one over after every purchase.'],
   },
   {
     tag: 'Reserves',
@@ -30,7 +30,7 @@ const CELLS = [
     img: '/visuals/unlock-expire.webp',
     pos: '62% 40%',
     alt: 'Oil painting: a trader studies a sealed card beside an hourglass that has nearly run out.',
-    lines: ['A treasury proves its total across many proofs, no note counted twice.', 'A Solana token mints only within it, and only while the proof is fresh.'],
+    lines: ['A treasury proves its total across many proofs, no note counted twice.', 'A wrapped token mints only within it, and only while the proof is fresh.'],
   },
 ]
 
